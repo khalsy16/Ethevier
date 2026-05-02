@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-celestial-dark: #05070a;
+  --color-celestial-depth: #0f1218;
+  --color-aether-gold: #f4d06f;
+  --color-aether-light: #fff3d6;
+  --color-xavier-blue: #b9d7ea;
+  --color-xavier-silver: #e1e8ed;
+  --color-ethereal-purple: #9a86b3;
+  --color-star-white: #fdfdfd;
+  --color-primary: #f4d06f;
+}
+
+@layer base {
+  body {
+    @apply bg-celestial-dark text-star-white font-sans selection:bg-aether-gold/30;
+    background-image: 
+      radial-gradient(circle at 10% 20%, rgba(244, 208, 111, 0.08) 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, rgba(185, 215, 234, 0.08) 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, rgba(154, 134, 179, 0.03) 0%, transparent 60%);
+  }
+}
+
+.star {
+  position: absolute;
+  background: white;
+  border-radius: 50%;
+  opacity: 0.5;
+  animation: twinkle var(--duration, 3s) infinite ease-in-out;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.falling-star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: linear-gradient(to right, white, transparent);
+  animation: fall 4s linear infinite;
+}
+
+@keyframes fall {
+  0% { 
+    transform: translateX(0) translateY(0) rotate(-45deg) scale(0); 
+    opacity: 0; 
+  }
+  10% { 
+    opacity: 1; 
+    transform: translateX(0) translateY(0) rotate(-45deg) scale(1); 
+  }
+  100% { 
+    transform: translateX(-500px) translateY(500px) rotate(-45deg) scale(1); 
+    opacity: 0; 
+  }
+}
+

@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User preferences and settings",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "dailyTarget": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "createdAt"]
+    },
+    "Income": {
+      "title": "Income Entry",
+      "description": "Daily income record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "source": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "amount", "date", "createdAt"]
+    },
+    "Wishlist": {
+      "title": "Wishlist Item",
+      "description": "Items the user wants to buy",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "link": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "attained"] },
+        "deadline": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "price", "status", "createdAt"]
+    },
+    "ImpulseCheck": {
+      "title": "Impulse Check",
+      "description": "Items the user is considering buying impulsively to check necessity over time",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "reason": { "type": "string" },
+        "status": { "type": "string", "enum": ["considering", "avoided", "purchased"] },
+        "waitDays": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "price", "status", "createdAt"]
+    },
+    "OffDay": {
+      "title": "Off Day",
+      "description": "User defined days with no income",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string", "format": "date" }
+      },
+      "required": ["userId", "date"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document"
+    },
+    "users/{userId}/incomes/{incomeId}": {
+      "schema": "Income",
+      "description": "User income records"
+    },
+    "users/{userId}/wishlist/{wishlistId}": {
+      "schema": "Wishlist",
+      "description": "User wishlist items"
+    },
+    "users/{userId}/impulseChecks/{checkId}": {
+      "schema": "ImpulseCheck",
+      "description": "User impulse buy consideration records"
+    },
+    "users/{userId}/offDays/{offDayId}": {
+      "schema": "OffDay",
+      "description": "User defined no-income days"
+    }
+  }
+}
