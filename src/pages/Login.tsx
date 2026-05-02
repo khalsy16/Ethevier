@@ -18,8 +18,13 @@ export default function Login() {
   const handleLogin = async () => {
     try {
       await signInWithGoogle();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      if (error.code === 'auth/unauthorized-domain') {
+        alert('Cek pengaman galaksi! Domain ini belum diizinkan di Firebase Console > Authentication > Settings > Authorized Domains.');
+      } else {
+        alert('Gagal menyambung ke rasi bintang: ' + error.message);
+      }
     }
   };
 

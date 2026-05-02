@@ -1,0 +1,23 @@
+{
+  "name": "Ethevier",
+  "short_name": "Ethevier",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#05070A",
+  "theme_color": "#05070A",
+  "description": "Kelola tabungan harian dan rasi harapanmu.",
+  "icons": [
+    {
+      "src": "https://lucide.dev/api/icon/stars?size=192&color=F4D06F",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://lucide.dev/api/icon/stars?size=512&color=F4D06F",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
