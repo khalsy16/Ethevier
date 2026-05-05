@@ -11,12 +11,14 @@ import CalendarPage from './pages/Calendar';
 import Calculator from './pages/Calculator';
 import Wishlist from './pages/Wishlist';
 import ImpulseCheck from './pages/ImpulseCheck';
+import SalesRecap from './pages/SalesRecap';
+import InvoiceAlbum from './pages/InvoiceAlbum';
 import { StarBackground } from './components/CelestialBackground';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [user, loading] = useAuthState(auth);
 
-  if (loading) return <div className="h-screen w-screen flex items-center justify-center text-aether-gold font-bold">Beresonansi dengan elemen alam semesta...</div>;
+  if (loading) return <div className="h-screen w-screen flex items-center justify-center text-aether-gold font-bold">Resonating with the elements of the universe...</div>;
   if (!user) return <Navigate to="/login" replace />;
 
   return <Layout>{children}</Layout>;
@@ -37,6 +39,8 @@ export default function App() {
         <Route path="/app/calculator" element={<ProtectedRoute><Calculator /></ProtectedRoute>} />
         <Route path="/app/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
         <Route path="/app/impulse" element={<ProtectedRoute><ImpulseCheck /></ProtectedRoute>} />
+        <Route path="/app/sales-recap" element={<ProtectedRoute><SalesRecap /></ProtectedRoute>} />
+        <Route path="/app/invoice-album" element={<ProtectedRoute><InvoiceAlbum /></ProtectedRoute>} />
         
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

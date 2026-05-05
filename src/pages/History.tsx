@@ -1,32 +1,86 @@
 import { useState, useEffect } from 'react';
 import { db, auth } from '../lib/firebase';
-import { collection, onSnapshot, query, orderBy, Timestamp, deleteDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, Timestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { format } from 'date-fns';
-import { History as HistoryIcon, Trash2, ArrowUpRight, Search, Filter } from 'lucide-react';
+import { History as HistoryIcon, Trash2, ArrowUpRight, Search, Filter, Edit2, X, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function History() {
   const [user] = useAuthState(auth);
-  const [incomes, setIncomes] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingTransaction, setEditingTransaction] = useState<any>(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editSource, setEditSource] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleEdit = (transaction: any) => {
+    setEditingTransaction(transaction);
+    setEditAmount(transaction.amount.toString());
+    setEditSource(transaction.source || '');
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !editingTransaction) return;
+
+    setIsUpdating(true);
+    try {
+      const collectionName = editingTransaction.type === 'income' ? 'incomes' : 'expenses';
+      await updateDoc(doc(db, 'users', user.uid, collectionName, editingTransaction.id), {
+        amount: parseFloat(editAmount),
+        source: editSource,
+        updatedAt: new Date()
+      });
+      setEditingTransaction(null);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
 
-    const q = query(
+    const iq = query(
       collection(db, 'users', user.uid, 'incomes'),
       orderBy('date', 'desc')
     );
+    const eq = query(
+      collection(db, 'users', user.uid, 'expenses'),
+      orderBy('date', 'desc')
+    );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setIncomes(data);
-      setLoading(false);
+    let incomes: any[] = [];
+    let expenses: any[] = [];
+
+    const unsubscribeIncomes = onSnapshot(iq, (snapshot) => {
+      incomes = snapshot.docs.map(doc => ({ id: doc.id, type: 'income', ...doc.data() }));
+      combineAndSet();
     });
 
-    return () => unsubscribe();
+    const unsubscribeExpenses = onSnapshot(eq, (snapshot) => {
+      expenses = snapshot.docs.map(doc => ({ id: doc.id, type: 'expense', ...doc.data() }));
+      combineAndSet();
+    });
+
+    const combineAndSet = () => {
+      const combined = [...incomes, ...expenses].sort((a, b) => {
+        const dateA = (a.date as Timestamp).toMillis();
+        const dateB = (b.date as Timestamp).toMillis();
+        return dateB - dateA;
+      });
+      setTransactions(combined);
+      setLoading(false);
+    };
+
+    return () => {
+      unsubscribeIncomes();
+      unsubscribeExpenses();
+    };
   }, [user]);
 
   const formatIDR = (amount: number) => {
@@ -37,21 +91,22 @@ export default function History() {
     }).format(amount);
   };
 
-  const filteredIncomes = incomes.filter(i => 
-    (i.source || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    formatIDR(i.amount).includes(searchTerm)
+  const filteredTransactions = transactions.filter(t => 
+    (t.source || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    formatIDR(t.amount).includes(searchTerm)
   );
 
-  const handleDelete = async (id: string) => {
-    if (!user || !confirm('Hapus rekapan ini dari rasi bintangmu?')) return;
+  const handleDelete = async (id: string, type: 'income' | 'expense') => {
+    if (!user || !confirm(`Remove this ${type} from your star constellation?`)) return;
     try {
-      await deleteDoc(doc(db, 'users', user.uid, 'incomes', id));
+      const collectionName = type === 'income' ? 'incomes' : 'expenses';
+      await deleteDoc(doc(db, 'users', user.uid, collectionName, id));
     } catch (error) {
       console.error(error);
     }
   };
 
-  if (loading) return <div className="p-8 text-xavier-blue">Melacak jejak bintang masa lalu...</div>;
+  if (loading) return <div className="p-8 text-xavier-blue">Tracking past star trails...</div>;
 
   return (
     <div className="space-y-8">
@@ -59,9 +114,9 @@ export default function History() {
         <div>
            <div className="flex items-center gap-3 mb-2">
              <HistoryIcon className="text-aether-gold" />
-             <h2 className="text-3xl font-bold text-star-white">Rekapan Bintang</h2>
+             <h2 className="text-3xl font-bold text-star-white">History</h2>
            </div>
-           <p className="text-xavier-blue/70">Jejak cahaya penghasilanmu sepanjang waktu.</p>
+           <p className="text-xavier-blue/70">The light trails of your prosperity over time.</p>
         </div>
 
         <div className="relative group w-full md:w-80">
@@ -70,7 +125,7 @@ export default function History() {
              type="text"
              value={searchTerm}
              onChange={e => setSearchTerm(e.target.value)}
-             placeholder="Cari transaksi..."
+             placeholder="Search transactions..."
              className="w-full pl-12 pr-6 py-3 bg-celestial-depth border border-white/10 rounded-2xl text-star-white focus:outline-none focus:border-aether-gold/50 transition-all"
            />
         </div>
@@ -78,18 +133,18 @@ export default function History() {
 
       <div className="bg-celestial-depth/50 border border-white/10 rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden">
          <div className="p-6 sm:p-8 border-b border-white/5 flex items-center justify-between">
-            <h3 className="font-bold text-star-white">Semua Transaksi</h3>
+            <h3 className="font-bold text-star-white">All Transactions</h3>
             <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-xavier-blue/60 uppercase tracking-widest">
                <Filter className="w-4 h-4" />
-               <span>Tahun/Bulan/Hari</span>
+               <span>Year/Month/Day</span>
             </div>
          </div>
 
          {/* Mobile View: Cards */}
          <div className="md:hidden divide-y divide-white/5">
-            {filteredIncomes.map((income, idx) => (
+            {filteredTransactions.map((transaction, idx) => (
               <motion.div 
-                key={income.id}
+                key={transaction.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.03 }}
@@ -97,25 +152,33 @@ export default function History() {
               >
                 <div className="flex justify-between items-start">
                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
-                         <ArrowUpRight className="w-4 h-4 text-green-400" />
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${transaction.type === 'income' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                         <ArrowUpRight className={`w-4 h-4 ${transaction.type === 'income' ? 'text-green-400' : 'text-red-400 rotate-90'}`} />
                       </div>
                       <div>
-                         <p className="text-sm font-semibold text-star-white">{income.source || 'Tanpa Keterangan'}</p>
+                         <p className="text-sm font-semibold text-star-white">{transaction.source || 'No Note'}</p>
                          <p className="text-[10px] text-xavier-blue/60 uppercase tracking-wider">
-                            {format((income.date as Timestamp).toDate(), 'dd MMM yyyy HH:mm')}
+                            {format((transaction.date as Timestamp).toDate(), 'dd MMM yyyy HH:mm')}
                          </p>
                       </div>
                    </div>
-                   <button 
-                     onClick={() => handleDelete(income.id)}
-                     className="p-2 text-xavier-blue/20 hover:text-red-400"
-                   >
-                     <Trash2 className="w-4 h-4" />
-                   </button>
+                   <div className="flex gap-2">
+                     <button 
+                       onClick={() => handleEdit(transaction)}
+                       className="p-2 text-xavier-blue/20 hover:text-aether-gold transition-colors"
+                     >
+                       <Edit2 className="w-4 h-4" />
+                     </button>
+                     <button 
+                       onClick={() => handleDelete(transaction.id, transaction.type)}
+                       className="p-2 text-xavier-blue/20 hover:text-red-400"
+                     >
+                       <Trash2 className="w-4 h-4" />
+                     </button>
+                   </div>
                 </div>
-                <div className="text-xl font-bold text-green-400">
-                   +{formatIDR(income.amount)}
+                <div className={`text-xl font-bold ${transaction.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
+                   {transaction.type === 'income' ? '+' : '-'}{formatIDR(transaction.amount)}
                 </div>
               </motion.div>
             ))}
@@ -126,17 +189,17 @@ export default function History() {
             <table className="w-full text-left border-collapse">
                <thead>
                   <tr className="bg-white/5">
-                     <th className="px-8 py-4 text-[10px] font-bold text-xavier-blue uppercase tracking-widest">Tanggal & Waktu</th>
-                     <th className="px-8 py-4 text-[10px] font-bold text-xavier-blue uppercase tracking-widest">Sumber / Deskripsi</th>
-                     <th className="px-8 py-4 text-[10px] font-bold text-xavier-blue uppercase tracking-widest">Jumlah</th>
-                     <th className="px-8 py-4 text-[10px] font-bold text-xavier-blue uppercase tracking-widest text-right">Aksi</th>
+                     <th className="px-8 py-4 text-[10px] font-bold text-xavier-blue uppercase tracking-widest">Date & Time</th>
+                     <th className="px-8 py-4 text-[10px] font-bold text-xavier-blue uppercase tracking-widest">Source / Description</th>
+                     <th className="px-8 py-4 text-[10px] font-bold text-xavier-blue uppercase tracking-widest">Amount</th>
+                     <th className="px-8 py-4 text-[10px] font-bold text-xavier-blue uppercase tracking-widest text-right">Actions</th>
                   </tr>
                </thead>
                <tbody>
                   <AnimatePresence>
-                     {filteredIncomes.map((income, idx) => (
+                     {filteredTransactions.map((transaction, idx) => (
                         <motion.tr 
-                          key={income.id}
+                          key={transaction.id}
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: idx * 0.03 }}
@@ -145,33 +208,41 @@ export default function History() {
                            <td className="px-8 py-6">
                               <div className="space-y-0.5">
                                  <p className="text-sm font-medium text-star-white">
-                                    {format((income.date as Timestamp).toDate(), 'dd MMMM yyyy')}
+                                    {format((transaction.date as Timestamp).toDate(), 'dd MMMM yyyy')}
                                  </p>
                                  <p className="text-[10px] text-xavier-blue/60 uppercase tracking-wider">
-                                    {format((income.date as Timestamp).toDate(), 'HH:mm:ss')}
+                                    {format((transaction.date as Timestamp).toDate(), 'HH:mm:ss')}
                                  </p>
                               </div>
                            </td>
                            <td className="px-8 py-6">
                               <div className="flex items-center gap-3">
-                                 <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
-                                    <ArrowUpRight className="w-4 h-4 text-green-400" />
+                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${transaction.type === 'income' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                                    <ArrowUpRight className={`w-4 h-4 ${transaction.type === 'income' ? 'text-green-400' : 'text-red-400 rotate-90'}`} />
                                  </div>
-                                 <span className="text-sm text-star-white font-medium">{income.source || 'Tanpa Keterangan'}</span>
+                                 <span className="text-sm text-star-white font-medium">{transaction.source || 'No Note'}</span>
                               </div>
                            </td>
                            <td className="px-8 py-6">
-                              <span className="text-sm font-bold text-green-400">
-                                 +{formatIDR(income.amount)}
+                              <span className={`text-sm font-bold ${transaction.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
+                                 {transaction.type === 'income' ? '+' : '-'}{formatIDR(transaction.amount)}
                               </span>
                            </td>
                            <td className="px-8 py-6 text-right">
-                              <button 
-                                onClick={() => handleDelete(income.id)}
-                                className="p-2 text-xavier-blue/20 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
-                              >
-                                 <Trash2 className="w-4 h-4" />
-                              </button>
+                              <div className="flex gap-2 justify-end">
+                                <button 
+                                  onClick={() => handleEdit(transaction)}
+                                  className="p-2 text-xavier-blue/20 hover:text-aether-gold hover:bg-aether-gold/10 rounded-xl transition-all"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={() => handleDelete(transaction.id, transaction.type)}
+                                  className="p-2 text-xavier-blue/20 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                            </td>
                         </motion.tr>
                      ))}
@@ -179,13 +250,75 @@ export default function History() {
                </tbody>
             </table>
             
-            {filteredIncomes.length === 0 && (
+            {filteredTransactions.length === 0 && (
                <div className="py-20 text-center">
-                  <p className="text-xavier-blue/40 italic">Tidak ada rekapan yang ditemukan dalam rasi bintangmu.</p>
+                  <p className="text-xavier-blue/40 italic">No traces found in your star constellation.</p>
                </div>
             )}
          </div>
       </div>
+       {/* Edit Modal */}
+       <AnimatePresence>
+         {editingTransaction && (
+           <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+             <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               onClick={() => setEditingTransaction(null)}
+               className="absolute inset-0 bg-celestial-dark/80 backdrop-blur-md"
+             />
+             <motion.div 
+               initial={{ opacity: 0, scale: 0.95, y: 20 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               exit={{ opacity: 0, scale: 0.95, y: 20 }}
+               className="relative w-full max-w-md bg-celestial-depth border border-white/10 rounded-[2.5rem] p-8 shadow-2xl"
+             >
+                <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-2xl font-bold text-star-white">Edit {editingTransaction.type === 'income' ? 'Income' : 'Expense'}</h3>
+                  <button onClick={() => setEditingTransaction(null)} className="p-2 text-xavier-blue/60 hover:text-star-white transition-colors">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleUpdate} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Amount</label>
+                    <div className="relative">
+                      <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl font-bold text-aether-gold">Rp</span>
+                      <input 
+                        type="number"
+                        value={editAmount}
+                        onChange={e => setEditAmount(e.target.value)}
+                        className="w-full pl-16 pr-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-xl font-bold text-star-white focus:outline-none focus:border-aether-gold/50"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Source / Note</label>
+                    <input 
+                      type="text"
+                      value={editSource}
+                      onChange={e => setEditSource(e.target.value)}
+                      className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-star-white focus:outline-none focus:border-aether-gold/50"
+                      required
+                    />
+                  </div>
+
+                  <button 
+                    disabled={isUpdating}
+                    className="w-full bg-aether-gold text-celestial-dark font-black py-5 rounded-2xl text-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Save className="w-5 h-5" />
+                    {isUpdating ? 'Updating...' : 'Save Changes'}
+                  </button>
+                </form>
+             </motion.div>
+           </div>
+         )}
+       </AnimatePresence>
     </div>
   );
 }

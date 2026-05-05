@@ -4,10 +4,10 @@ import { Sparkles, ArrowRight } from 'lucide-react';
 import { FallingStars } from '../components/CelestialBackground';
 
 const quotes = [
-  "Keuangan adalah perjalanan, bukan hanya tujuan.",
-  "Tabunganmu adalah bintang di galaksimu sendiri.",
-  "Langkah kecil setiap hari, lompatan besar untuk harapanmu.",
-  "Bermimpilah setinggi langit, menabunglah dengan bijak, hiduplah dengan indah."
+  "Finance is a journey, not just a destination.",
+  "Your savings are the stars in your own galaxy.",
+  "Small steps every day, giant leaps for your dreams.",
+  "Dream big, save wisely, live beautifully."
 ];
 
 export default function Landing() {
@@ -25,7 +25,7 @@ export default function Landing() {
       >
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xavier-blue text-sm mb-8">
           <Sparkles className="w-4 h-4 text-aether-gold" />
-          <span>Kelola keajaibanmu, tumbuhkan masa depanmu</span>
+          <span>Manage your magic, grow your future</span>
         </div>
         
         <h1 className="text-5xl md:text-7xl font-bold mb-6 text-star-white tracking-tight">
@@ -33,7 +33,7 @@ export default function Landing() {
         </h1>
         
         <p className="text-lg md:text-xl text-xavier-blue/80 mb-10 leading-relaxed italic">
-          "Galaksi di mana rezekimu bertemu dengan impianmu."
+          "The galaxy where your prosperity meets your dreams."
         </p>
         
         <div className="flex flex-col md:flex-row items-center justify-center gap-4">
@@ -41,7 +41,7 @@ export default function Landing() {
             onClick={() => navigate('/login')}
             className="px-8 py-4 bg-aether-gold text-celestial-dark font-bold rounded-2xl flex items-center gap-3 hover:scale-105 transition-transform shadow-[0_0_20px_rgba(238,188,102,0.4)]"
           >
-            Bersinar Sekarang <ArrowRight className="w-5 h-5" />
+            Shine Now <ArrowRight className="w-5 h-5" />
           </button>
         </div>
       </motion.div>

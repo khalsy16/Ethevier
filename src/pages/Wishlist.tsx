@@ -54,25 +54,25 @@ export default function Wishlist() {
     });
 
     const incomeQ = query(collection(db, 'users', user.uid, 'incomes'));
+    const expenseQ = query(collection(db, 'users', user.uid, 'expenses'));
+    
+    let totalInc = 0;
+    let totalExp = 0;
+
     const unsubscribeIncome = onSnapshot(incomeQ, (snapshot) => {
-      const docs = snapshot.docs.map(doc => doc.data());
-      const total = docs.reduce((acc, curr) => acc + (curr.amount || 0), 0);
-      setTotalIncome(total);
-      
-      // Calculate daily average based on actual entries
-      if (docs.length > 0) {
-        // If they have entries, we find the average amount per entry as a daily rate proxy
-        // Or better: sum of last 30 days / 30.
-        // For now, let's use the average of the last few entries to represent "current daily rate"
-        const recent = docs.slice(-7);
-        const avg = recent.reduce((acc, curr) => acc + (curr.amount || 0), 0) / Math.max(recent.length, 1);
-        setDailyAverage(avg);
-      }
+      totalInc = snapshot.docs.reduce((acc, curr) => acc + (curr.data().amount || 0), 0);
+      setTotalIncome(totalInc - totalExp);
+    });
+
+    const unsubscribeExpense = onSnapshot(expenseQ, (snapshot) => {
+      totalExp = snapshot.docs.reduce((acc, curr) => acc + (curr.data().amount || 0), 0);
+      setTotalIncome(totalInc - totalExp);
     });
 
     return () => {
       unsubscribe();
       unsubscribeIncome();
+      unsubscribeExpense();
     };
   }, [user]);
 
@@ -162,26 +162,21 @@ export default function Wishlist() {
     }).format(amount);
   };
 
-  const calculateDays = (itemPrice: number) => {
-    if (dailyAverage <= 0) return '∞';
-    return Math.ceil(itemPrice / dailyAverage);
-  };
-
-  if (loading) return <div className="p-8 text-xavier-blue">Mencari mimpi-mimpimu di angkasa...</div>;
+  if (loading) return <div className="p-8 text-xavier-blue">Searching for your dreams in the stars...</div>;
 
   return (
     <div className="space-y-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
         <div>
-          <h2 className="text-3xl font-bold text-star-white mb-2">Harapan Bintangku</h2>
-          <p className="text-xavier-blue/70">Apa yang hatimu inginkan, semesta membantu menghitungnya.</p>
+          <h2 className="text-3xl font-bold text-star-white mb-2">Wishlist</h2>
+          <p className="text-xavier-blue/70">What your heart desires, the universe helps you plan.</p>
         </div>
         <button 
           onClick={() => setShowAdd(true)}
           className="w-full sm:w-auto flex items-center justify-center gap-2 bg-aether-gold text-celestial-dark px-6 py-4 sm:py-3 rounded-2xl font-bold hover:scale-105 transition-all shadow-[0_0_20px_rgba(244,208,111,0.3)]"
         >
           <Plus className="w-5 h-5" />
-          <span>Tambah Harapan Baru</span>
+          <span>Add New Wish</span>
         </button>
       </div>
 
@@ -217,7 +212,7 @@ export default function Wishlist() {
                               onClick={() => deleteItem(item.id)}
                               className="px-3 py-2 text-[10px] font-bold text-white uppercase tracking-tighter hover:bg-red-600 transition-colors"
                             >
-                              Hapus
+                              Delete
                             </button>
                             <button 
                               onClick={() => setDeletingId(null)}
@@ -255,7 +250,7 @@ export default function Wishlist() {
                   <div className="space-y-4">
                     <div className="space-y-2">
                        <div className="flex justify-between text-xs text-xavier-blue font-semibold">
-                          <span>Progres Tabungan Galaksi</span>
+                          <span>Galaxy Savings Progress</span>
                           <span>{Math.round(progress)}%</span>
                        </div>
                        <div className="h-2 bg-white/5 rounded-full overflow-hidden">
@@ -270,11 +265,11 @@ export default function Wishlist() {
                     <div className="flex items-center justify-between pt-4 border-t border-white/5">
                         <div className="flex items-center gap-2 text-[10px] text-xavier-blue font-bold uppercase tracking-widest">
                            <Clock className="w-3 h-3" />
-                           <span>Est. {calculateDays(item.price)} Hari Lagi</span>
+                           <span>Planned Wish</span>
                         </div>
                         {item.link && (
                           <a href={item.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] text-aether-gold font-bold uppercase tracking-widest hover:underline">
-                            Toko <ExternalLink className="w-3 h-3" />
+                            Shop <ExternalLink className="w-3 h-3" />
                           </a>
                         )}
                     </div>
@@ -287,7 +282,7 @@ export default function Wishlist() {
         {items.length === 0 && (
           <div className="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-[3rem]">
              <ShoppingCart className="w-12 h-12 text-xavier-blue/20 mx-auto mb-4" />
-             <p className="text-xavier-blue/40 italic">Galaksi kosong. Apa yang kamu impikan?</p>
+             <p className="text-xavier-blue/40 italic">Galaxy is empty. What are you dreaming of?</p>
           </div>
         )}
       </div>
@@ -310,7 +305,7 @@ export default function Wishlist() {
                 className="relative w-full max-w-md bg-celestial-depth border border-white/10 rounded-[2.5rem] p-6 sm:p-10 shadow-2xl overflow-y-auto max-h-[90vh]"
               >
                 <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-2xl font-bold text-star-white">{editingItem ? 'Edit Harapan' : 'Harapan Baru'}</h3>
+                  <h3 className="text-2xl font-bold text-star-white">{editingItem ? 'Edit Wish' : 'New Wish'}</h3>
                   <button onClick={resetForm} className="p-2 text-xavier-blue/60 hover:text-star-white">
                     <X className="w-6 h-6" />
                   </button>
@@ -318,17 +313,17 @@ export default function Wishlist() {
                 
                 <form onSubmit={handleAdd} className="space-y-6">
                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Nama Barang</label>
+                      <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Item Name</label>
                       <input 
                         value={name}
                         onChange={e => setName(e.target.value)}
-                        placeholder="Apa rasi harapanmu?"
+                        placeholder="What is your dream item?"
                         className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-star-white focus:outline-none focus:border-aether-gold/50"
                         required
                       />
                    </div>
                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Harga (IDR)</label>
+                      <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Price</label>
                       <input 
                         type="number"
                         value={price}
@@ -339,7 +334,7 @@ export default function Wishlist() {
                       />
                    </div>
                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Tautan Belanja</label>
+                      <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Shopping Link</label>
                       <input 
                         value={link}
                         onChange={e => setLink(e.target.value)}
@@ -348,7 +343,7 @@ export default function Wishlist() {
                       />
                    </div>
                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Tenggat Waktu</label>
+                      <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Deadline</label>
                       <input 
                         type="date"
                         value={deadline}
@@ -357,17 +352,17 @@ export default function Wishlist() {
                       />
                    </div>
                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Catatan Khusus</label>
+                      <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Special Notes</label>
                       <textarea 
                         value={notes}
                         onChange={e => setNotes(e.target.value)}
-                        placeholder="Spesifikasi atau rincian tambahan..."
+                        placeholder="Specifications or additional details..."
                         className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-star-white focus:outline-none focus:border-aether-gold/50 resize-none h-24"
                       />
                    </div>
                    
                    <button className="w-full bg-aether-gold text-celestial-dark font-black py-5 rounded-2xl text-lg hover:scale-[1.02] active:scale-95 transition-all">
-                      {editingItem ? 'Perbarui Harapan' : 'Terbangkan Harapan'}
+                      {editingItem ? 'Update Wish' : 'Send Wish to Stars'}
                    </button>
                 </form>
               </motion.div>

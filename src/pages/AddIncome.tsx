@@ -8,7 +8,8 @@ import { Sparkles, Coins, CheckCircle2 } from 'lucide-react';
 export default function AddIncome() {
   const [user] = useAuthState(auth);
   const [amount, setAmount] = useState('');
-  const [source, setSource] = useState('Pendapatan Harian');
+  const [source, setSource] = useState('');
+  const [type, setType] = useState<'income' | 'expense'>('income');
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -18,13 +19,15 @@ export default function AddIncome() {
 
     setLoading(true);
     try {
-      await addDoc(collection(db, 'users', user.uid, 'incomes'), {
+      const collectionName = type === 'income' ? 'incomes' : 'expenses';
+      await addDoc(collection(db, 'users', user.uid, collectionName), {
         amount: parseFloat(amount),
-        source,
+        source: source || (type === 'income' ? 'Daily Savings' : 'General Expense'),
         date: serverTimestamp(),
         createdAt: serverTimestamp()
       });
       setAmount('');
+      setSource('');
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
@@ -37,8 +40,8 @@ export default function AddIncome() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 sm:space-y-12 pb-10 sm:py-10">
       <div className="text-center">
-        <h2 className="text-3xl sm:text-4xl font-bold text-star-white mb-4">Tambahkan ke Galaksimu</h2>
-        <p className="text-sm sm:text-base text-xavier-blue/70">Setiap koin adalah percikan yang menerangi masa depanmu.</p>
+        <h2 className="text-3xl sm:text-4xl font-bold text-star-white mb-4">Add Transaction</h2>
+        <p className="text-sm sm:text-base text-xavier-blue/70">Every coin is a spark that lights up your future.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
@@ -48,9 +51,24 @@ export default function AddIncome() {
           animate={{ opacity: 1, x: 0 }}
           className="bg-celestial-depth/50 border border-white/10 p-6 sm:p-10 rounded-[2.5rem] sm:rounded-[3rem] backdrop-blur-xl shadow-2xl order-2 lg:order-1"
         >
+          <div className="flex bg-white/5 p-1 rounded-2xl mb-8">
+            <button 
+              onClick={() => setType('income')}
+              className={`flex-1 py-3 rounded-xl font-bold transition-all ${type === 'income' ? 'bg-aether-gold text-celestial-dark shadow-lg' : 'text-xavier-blue hover:text-star-white'}`}
+            >
+              Income
+            </button>
+            <button 
+              onClick={() => setType('expense')}
+              className={`flex-1 py-3 rounded-xl font-bold transition-all ${type === 'expense' ? 'bg-red-500 text-white shadow-lg' : 'text-xavier-blue hover:text-star-white'}`}
+            >
+              Expense
+            </button>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] sm:text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Jumlah Rezeki (IDR)</label>
+              <label className="text-[10px] sm:text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Amount</label>
               <div className="relative">
                 <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl sm:text-2xl font-bold text-aether-gold">Rp</span>
                 <input 
@@ -65,22 +83,24 @@ export default function AddIncome() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] sm:text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Sumber / Catatan</label>
+              <label className="text-[10px] sm:text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Source / Note</label>
               <input 
                 type="text"
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
-                placeholder="Dari mana asal rezeki ini?"
+                placeholder={type === 'income' ? "Where did this income come from?" : "What was this expense for?"}
                 className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-sm sm:text-base text-star-white focus:outline-none focus:border-aether-gold/50 transition-all"
               />
             </div>
 
             <button 
               disabled={loading}
-              className="w-full bg-aether-gold text-celestial-dark font-black py-4 sm:py-6 rounded-2xl text-lg sm:text-xl shadow-[0_10px_30px_rgba(244,208,111,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+              className={`w-full font-black py-4 sm:py-6 rounded-2xl text-lg sm:text-xl shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 ${
+                type === 'income' ? 'bg-aether-gold text-celestial-dark' : 'bg-red-500 text-white'
+              }`}
             >
               <Coins className="w-5 h-5 sm:w-6 sm:h-6" />
-              {loading ? 'Memproses...' : 'Simpan Rezeki'}
+              {loading ? 'Processing...' : `Save ${type.charAt(0).toUpperCase() + type.slice(1)}`}
             </button>
           </form>
         </motion.div>
@@ -136,8 +156,8 @@ export default function AddIncome() {
                         <CheckCircle2 className="w-16 h-16 text-white" />
                     </div>
                     <div className="text-center">
-                        <h3 className="text-3xl font-bold text-white mb-2">Berhasil Disimpan!</h3>
-                        <p className="text-green-400 font-medium tracking-widest uppercase text-sm">Kemakmuran Galaksi +1</p>
+                        <h3 className="text-3xl font-bold text-white mb-2">Saved Successfully!</h3>
+                        <p className="text-green-400 font-medium tracking-widest uppercase text-sm">Prosperity Increased +1</p>
                     </div>
                     {/* Coin rain particles */}
                     {Array.from({ length: 15 }).map((_, i) => (

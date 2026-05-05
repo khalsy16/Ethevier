@@ -21,9 +21,11 @@ export default function Login() {
     } catch (error: any) {
       console.error(error);
       if (error.code === 'auth/unauthorized-domain') {
-        alert('Cek pengaman galaksi! Domain ini belum diizinkan di Firebase Console > Authentication > Settings > Authorized Domains.');
+        alert('Error: Domain "' + window.location.hostname + '" is not authorized in Firebase Console. \n\nHow to fix: \n1. Open console.firebase.google.com \n2. Choose your project \n3. Go to Authentication > Settings > Authorized Domains \n4. Add "' + window.location.hostname + '"');
+      } else if (error.code === 'auth/popup-blocked') {
+        alert('Popup blocked by browser! Please allow popups to enter the galaxy.');
       } else {
-        alert('Gagal menyambung ke rasi bintang: ' + error.message);
+        alert('Failed to connect to the constellation: ' + error.message);
       }
     }
   };
@@ -39,8 +41,8 @@ export default function Login() {
           <LogIn className="w-8 h-8 text-aether-gold" />
         </div>
         
-        <h2 className="text-2xl font-bold text-star-white mb-2">Selamat Datang Kembali</h2>
-        <p className="text-xavier-blue/70 mb-8 text-sm">Amankan tabunganmu dan kelola galaksimu dengan keajaiban.</p>
+        <h2 className="text-2xl font-bold text-star-white mb-2">Welcome Back</h2>
+        <p className="text-xavier-blue/70 mb-8 text-sm">Secure your savings and manage your galaxy with magic.</p>
         
         <button 
           onClick={handleLogin}
@@ -48,7 +50,7 @@ export default function Login() {
           className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white text-celestial-dark font-bold rounded-2xl hover:bg-star-white transition-colors disabled:opacity-50"
         >
           <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="Google" />
-          <span>Masuk dengan Google</span>
+          <span>Sign in with Google</span>
         </button>
         
         <div className="mt-8 pt-8 border-t border-white/5">

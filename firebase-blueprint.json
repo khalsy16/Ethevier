@@ -25,6 +25,31 @@
       },
       "required": ["userId", "amount", "date", "createdAt"]
     },
+    "Expense": {
+      "title": "Expense Entry",
+      "description": "Daily expense record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "source": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "amount", "date", "createdAt"]
+    },
+    "Invoice": {
+      "title": "Invoice Entry",
+      "description": "Invoice image and details",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "imageUrl", "createdAt"]
+    },
     "Wishlist": {
       "title": "Wishlist Item",
       "description": "Items the user wants to buy",
@@ -65,6 +90,30 @@
         "date": { "type": "string", "format": "date" }
       },
       "required": ["userId", "date"]
+    },
+    "SalesRecap": {
+      "title": "Sales Recap",
+      "description": "Detailed sales transaction summary",
+      "type": "object",
+      "properties": {
+        "customerName": { "type": "string" },
+        "booth": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "quantity": { "type": "number" },
+              "price": { "type": "number" }
+            }
+          }
+        },
+        "fee": { "type": "number" },
+        "noInvoice": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customerName", "booth", "items", "fee", "createdAt"]
     }
   },
   "firestore": {
@@ -75,6 +124,14 @@
     "users/{userId}/incomes/{incomeId}": {
       "schema": "Income",
       "description": "User income records"
+    },
+    "users/{userId}/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "User expense records"
+    },
+    "users/{userId}/invoices/{invoiceId}": {
+      "schema": "Invoice",
+      "description": "User invoice images"
     },
     "users/{userId}/wishlist/{wishlistId}": {
       "schema": "Wishlist",
@@ -87,6 +144,10 @@
     "users/{userId}/offDays/{offDayId}": {
       "schema": "OffDay",
       "description": "User defined no-income days"
+    },
+    "users/{userId}/salesRecap/{saleId}": {
+      "schema": "SalesRecap",
+      "description": "Detailed sales transaction records"
     }
   }
 }

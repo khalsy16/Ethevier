@@ -11,6 +11,8 @@ import {
   LogOut,
   Sparkle,
   Menu,
+  FileSpreadsheet,
+  Image as ImageIcon,
   X
 } from 'lucide-react';
 import { auth, logout } from '../lib/firebase';
@@ -34,13 +36,15 @@ export default function Layout({ children }: { children: ReactNode }) {
   };
 
   const navItems = [
-    { to: '/app', icon: LayoutDashboard, label: 'Orbit Utama' },
-    { to: '/app/income', icon: PlusCircle, label: 'Tabung Bintang' },
-    { to: '/app/history', icon: History, label: 'Jejak Kas' },
-    { to: '/app/calendar', icon: Calendar, label: 'Almanak' },
-    { to: '/app/calculator', icon: Calculator, label: 'Kalkulator' },
-    { to: '/app/wishlist', icon: Heart, label: 'Harapan Bintang' },
-    { to: '/app/impulse', icon: ShieldAlert, label: 'Perisai Impuls' },
+    { to: '/app', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/app/income', icon: PlusCircle, label: 'Add Transaction' },
+    { to: '/app/history', icon: History, label: 'History' },
+    { to: '/app/calendar', icon: Calendar, label: 'Calendar' },
+    { to: '/app/calculator', icon: Calculator, label: 'Calculator' },
+    { to: '/app/sales-recap', icon: FileSpreadsheet, label: 'Sales Recap' },
+    { to: '/app/invoice-album', icon: ImageIcon, label: 'Invoice Album' },
+    { to: '/app/wishlist', icon: Heart, label: 'Wishlist' },
+    { to: '/app/impulse', icon: ShieldAlert, label: 'Impulse Check' },
   ];
 
   const SidebarContent = () => (
@@ -51,7 +55,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         </div>
         <div>
           <h1 className="text-xl font-bold text-aether-gold leading-tight">Ethevier</h1>
-          <p className="text-[10px] text-xavier-blue uppercase tracking-widest font-medium">Pemandu Surgawi</p>
+          <p className="text-[10px] text-xavier-blue uppercase tracking-widest font-medium">Celestial Guide</p>
         </div>
       </div>
 
@@ -98,12 +102,12 @@ export default function Layout({ children }: { children: ReactNode }) {
           className="flex items-center gap-3 w-full px-4 py-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-all duration-300"
         >
           <LogOut className="w-5 h-5" />
-          <span className="font-medium text-sm">Keluar Akun</span>
+          <span className="font-medium text-sm">Logout</span>
         </button>
       </div>
       
       <div className="p-4 text-center">
-          <p className="text-[10px] text-xavier-blue/40 italic">dibuat oleh khalisa untuk diri sendiri</p>
+          <p className="text-[10px] text-xavier-blue/40 italic">made by khalisa for myself</p>
       </div>
     </div>
   );

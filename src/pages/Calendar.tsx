@@ -100,23 +100,23 @@ export default function CalendarPage() {
     }).format(amount);
   };
 
-  if (loading) return <div className="p-8 text-xavier-blue">Menyelaraskan orbit...</div>;
+  if (loading) return <div className="p-8 text-xavier-blue">Synchronizing orbits...</div>;
 
   return (
     <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-star-white mb-2">Jadwal Galaksi</h2>
-            <p className="text-sm sm:text-base text-xavier-blue/70">Waktu yang tepat untuk menabung dan merencanakan masa depan.</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-star-white mb-2">Calendar</h2>
+            <p className="text-sm sm:text-base text-xavier-blue/70">The perfect time to save and plan for the future.</p>
           </div>
           <div className="flex flex-wrap gap-4">
              <div className="flex items-center gap-2">
                 <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-red-400" />
-                <span className="text-[8px] sm:text-[10px] text-xavier-blue uppercase font-bold tracking-widest">Hari Libur</span>
+                <span className="text-[8px] sm:text-[10px] text-xavier-blue uppercase font-bold tracking-widest">Holidays</span>
              </div>
              <div className="flex items-center gap-2">
                 <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-aether-gold" />
-                <span className="text-[8px] sm:text-[10px] text-xavier-blue uppercase font-bold tracking-widest">Tenggat Waktu</span>
+                <span className="text-[8px] sm:text-[10px] text-xavier-blue uppercase font-bold tracking-widest">Deadlines</span>
              </div>
           </div>
         </div>
@@ -135,7 +135,7 @@ export default function CalendarPage() {
            </div>
 
            <div className="grid grid-cols-7 gap-px bg-white/10 rounded-2xl overflow-hidden border border-white/10">
-              {['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].map(day => (
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                  <div key={day} className="bg-celestial-depth py-4 text-center text-[10px] font-bold text-xavier-blue uppercase tracking-widest">{day}</div>
               ))}
               
@@ -181,17 +181,17 @@ export default function CalendarPage() {
                           )}
                           {isOff && !holidayName && (
                              <p className="text-[7px] text-red-300 font-bold leading-tight uppercase bg-red-500/10 p-1 rounded truncate">
-                                Libur Khusus
+                                 Special Holiday
                              </p>
                           )}
                           {wishlistDeadlines.map((w, idx) => (
                              <p key={`w-${idx}`} className="text-[7px] text-aether-gold font-bold leading-tight uppercase bg-aether-gold/10 p-1 rounded truncate">
-                                Harapan: {w.name}
+                                 Wish: {w.name}
                              </p>
                           ))}
                           {impulseDeadlines.map((i, idx) => (
                              <p key={`i-${idx}`} className="text-[7px] text-ethereal-purple font-bold leading-tight uppercase bg-ethereal-purple/10 p-1 rounded truncate">
-                                Impuls: {i.name}
+                                 Impulse: {i.name}
                              </p>
                           ))}
                        </div>
@@ -214,12 +214,12 @@ export default function CalendarPage() {
            >
               <div className="flex items-center gap-3 mb-6">
                  <CalcIcon className="text-aether-gold" />
-                 <h3 className="text-lg font-bold text-aether-gold">Proyeksi Pendapatan</h3>
+                 <h3 className="text-lg font-bold text-aether-gold">Income Projection</h3>
               </div>
               
               <div className="space-y-6">
                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-xavier-blue uppercase tracking-widest">Prediksi Per Hari (IDR)</label>
+                    <label className="text-[10px] font-bold text-xavier-blue uppercase tracking-widest">Daily Prediction (IDR)</label>
                     <input 
                       type="number"
                       value={dailyProjection}
@@ -230,21 +230,21 @@ export default function CalendarPage() {
                  </div>
 
                  <div className="pt-6 border-t border-white/10">
-                    <p className="text-xs text-xavier-blue/60 mb-2 uppercase tracking-widest font-bold">Total Perkiraan Bulan Ini</p>
+                    <p className="text-xs text-xavier-blue/60 mb-2 uppercase tracking-widest font-bold">Estimated Total This Month</p>
                     <p className="text-3xl font-black text-aether-gold">{formatIDR(monthlyProjection)}</p>
-                    <p className="text-[10px] text-xavier-blue/40 mt-2 italic">*Hanya menghitung hari aktif (Mengecualikan akhir pekan, Libur Nasional, dan Libur Khusus pilihanmu).</p>
+                    <p className="text-[10px] text-xavier-blue/40 mt-2 italic">*Only counts active days (Excludes weekends, National Holidays, and your chosen Special Holidays).</p>
                  </div>
               </div>
            </motion.div>
 
            <div className="bg-celestial-depth p-8 rounded-[2.5rem] border border-white/5">
-              <h4 className="font-bold text-star-white mb-2 uppercase text-xs tracking-widest">Atur Hari Liburmu</h4>
-              <p className="text-[10px] text-xavier-blue/60 mb-4 italic">Klik pada tanggal di kalender untuk menandai hari dimana kamu tidak mendapatkan penghasilan.</p>
+              <h4 className="font-bold text-star-white mb-2 uppercase text-xs tracking-widest">Manage Your Holidays</h4>
+              <p className="text-[10px] text-xavier-blue/60 mb-4 italic">Click on a date in the calendar to mark days when you don't receive income.</p>
               
               <div className="p-4 bg-white/5 rounded-2xl flex items-start gap-3">
                  <Plus className="w-4 h-4 text-aether-gold mt-1 shrink-0" />
                  <p className="text-[11px] text-xavier-blue/80 leading-relaxed">
-                    Hari Libur yang kamu pilih akan mempengaruhi kalkulasi proyeksi tabungan bulananmu secara real-time.
+                    Chosen holidays will affect your monthly saving projection calculation in real-time.
                  </p>
               </div>
            </div>

@@ -86,8 +86,8 @@ export default function Calculator() {
   return (
     <div className="max-w-5xl mx-auto space-y-8 sm:space-y-12">
       <div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-star-white mb-2">Kalkulator Ethevier</h2>
-        <p className="text-sm sm:text-base text-xavier-blue/70">Hitung orbit keuanganmu dan pantau konversi mata uang dunia ke Rupiah.</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-star-white mb-2">Ethevier Calculator</h2>
+        <p className="text-sm sm:text-base text-xavier-blue/70">Calculate your financial orbit and track world currency conversions.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
@@ -138,14 +138,14 @@ export default function Calculator() {
                     <div className="p-2 bg-xavier-blue/10 rounded-xl">
                        <ArrowRightLeft className="w-5 h-5 text-xavier-blue" />
                     </div>
-                    <h3 className="text-xl font-bold text-star-white">Perisai Konversi</h3>
+                    <h3 className="text-xl font-bold text-star-white">Conversion Shield</h3>
                  </div>
               </div>
 
               <div className="space-y-8">
                  {/* Selector */}
                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-xavier-blue uppercase tracking-widest px-2">Pilih Mata Uang Asal</label>
+                    <label className="text-[10px] font-black text-xavier-blue uppercase tracking-widest px-2">Select Source Currency</label>
                     <div className="grid grid-cols-3 gap-3">
                        {Object.keys(exchangeToIdr).map(code => (
                           <button 
@@ -165,7 +165,7 @@ export default function Calculator() {
 
                  <div className="p-8 rounded-[2rem] bg-white/5 border border-white/5 text-center relative overflow-hidden group">
                     <div className="absolute inset-0 bg-aether-gold/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <p className="text-xs font-bold text-xavier-blue/60 uppercase tracking-widest mb-4">Hasil Konversi ke IDR</p>
+                    <p className="text-xs font-bold text-xavier-blue/60 uppercase tracking-widest mb-4">Conversion Result (IDR)</p>
                     <p className="text-4xl font-black text-aether-gold mb-2 transition-transform group-hover:scale-105">
                        {formatIDR(idrResult)}
                     </p>
@@ -177,7 +177,7 @@ export default function Calculator() {
               </div>
               
               <p className="mt-8 text-[10px] text-xavier-blue/30 text-center italic leading-relaxed px-4">
-                 *Kurs simulasi rasi bintang. Nilai dapat bervariasi tergantung orbit pusat keuangan dunia. Data diperbarui melalui frekuensi resonansi astral.
+                 *Simulation exchange rates. Values may vary depending on world financial orbits. Data updated via astral resonance frequency.
               </p>
            </div>
         </div>
