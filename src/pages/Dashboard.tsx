@@ -15,11 +15,10 @@ import {
   CreditCard,
   ArrowUpRight,
   Target,
-  ShieldAlert,
-  ArrowRight
+  ShieldAlert
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { format, startOfWeek, startOfMonth, startOfYear, isAfter, differenceInDays } from 'date-fns';
+import { format, startOfWeek, startOfMonth, startOfYear, isAfter } from 'date-fns';
 
 enum OperationType {
   CREATE = 'create',
@@ -52,7 +51,6 @@ export default function Dashboard() {
   const [incomes, setIncomes] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [wishlist, setWishlist] = useState<any[]>([]);
-  const [impulseChecks, setImpulseChecks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
@@ -113,20 +111,10 @@ export default function Dashboard() {
       handleFirestoreError(error, OperationType.GET, wishlistPath);
     });
 
-    const impulsePath = `users/${user.uid}/impulseChecks`;
-    const icq = query(collection(db, impulsePath), where('status', '==', 'considering'));
-    const unsubscribeImpulse = onSnapshot(icq, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setImpulseChecks(data);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, impulsePath);
-    });
-
     return () => {
       unsubscribeIncomes();
       unsubscribeExpenses();
       unsubscribeWishlist();
-      unsubscribeImpulse();
     };
   }, [user]);
 
@@ -161,12 +149,6 @@ export default function Dashboard() {
     return dateB - dateA;
   });
 
-  const finishedChecks = impulseChecks.filter(check => {
-    const createdAt = check.createdAt?.toDate ? check.createdAt.toDate() : new Date();
-    const daysPassed = differenceInDays(new Date(), createdAt);
-    return daysPassed >= (check.waitDays || 0);
-  });
-
   const formatIDR = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -188,21 +170,6 @@ export default function Dashboard() {
           <h2 className="text-2xl sm:text-3xl font-bold text-star-white mb-2">Hello, {user?.displayName}!</h2>
           <p className="text-xavier-blue/70 text-sm sm:text-base">Your celestial financial orbit today.</p>
         </div>
-        {finishedChecks.length > 0 && (
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="w-full sm:w-auto bg-red-500/10 border border-red-500/20 px-6 py-4 rounded-3xl flex items-center gap-4 animate-pulse cursor-pointer"
-            onClick={() => window.location.href = '/app/impulse'}
-          >
-            <ShieldAlert className="text-red-400 w-6 h-6" />
-            <div className="flex-1">
-              <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest">Impulse Alert</p>
-              <p className="text-sm font-semibold text-star-white">{finishedChecks.length} items need review</p>
-            </div>
-            <ArrowRight className="text-red-400 w-4 h-4 ml-2" />
-          </motion.div>
-        )}
       </div>
 
       {/* Main Stats Grid */}

@@ -7,7 +7,6 @@ import {
   Calendar, 
   Calculator, 
   Heart, 
-  ShieldAlert,
   LogOut,
   Sparkle,
   Menu,
@@ -44,7 +43,6 @@ export default function Layout({ children }: { children: ReactNode }) {
     { to: '/app/sales-recap', icon: FileSpreadsheet, label: 'Sales Recap' },
     { to: '/app/invoice-album', icon: ImageIcon, label: 'Invoice Album' },
     { to: '/app/wishlist', icon: Heart, label: 'Wishlist' },
-    { to: '/app/impulse', icon: ShieldAlert, label: 'Impulse Check' },
   ];
 
   const SidebarContent = () => (

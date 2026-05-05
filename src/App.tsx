@@ -10,7 +10,6 @@ import History from './pages/History';
 import CalendarPage from './pages/Calendar';
 import Calculator from './pages/Calculator';
 import Wishlist from './pages/Wishlist';
-import ImpulseCheck from './pages/ImpulseCheck';
 import SalesRecap from './pages/SalesRecap';
 import InvoiceAlbum from './pages/InvoiceAlbum';
 import { StarBackground } from './components/CelestialBackground';
@@ -38,7 +37,6 @@ export default function App() {
         <Route path="/app/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
         <Route path="/app/calculator" element={<ProtectedRoute><Calculator /></ProtectedRoute>} />
         <Route path="/app/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
-        <Route path="/app/impulse" element={<ProtectedRoute><ImpulseCheck /></ProtectedRoute>} />
         <Route path="/app/sales-recap" element={<ProtectedRoute><SalesRecap /></ProtectedRoute>} />
         <Route path="/app/invoice-album" element={<ProtectedRoute><InvoiceAlbum /></ProtectedRoute>} />
         
