@@ -23,6 +23,7 @@ export default function AddIncome() {
       await addDoc(collection(db, 'users', user.uid, collectionName), {
         amount: parseFloat(amount),
         source: source || (type === 'income' ? 'Daily Savings' : 'General Expense'),
+        userId: user.uid,
         date: serverTimestamp(),
         createdAt: serverTimestamp()
       });

@@ -138,7 +138,7 @@ export default function Dashboard() {
 
     const calcTotal = (list: any[], start: Date) => 
       list.filter(i => {
-        const date = (i.date as Timestamp).toDate();
+        const date = (i.date as Timestamp)?.toDate ? (i.date as Timestamp).toDate() : new Date();
         return isAfter(date, start);
       }).reduce((acc, curr) => acc + (curr.amount || 0), 0);
 
@@ -156,8 +156,8 @@ export default function Dashboard() {
   })();
 
   const allActivity = [...incomes, ...expenses].sort((a, b) => {
-    const dateA = (a.date as Timestamp).toMillis();
-    const dateB = (b.date as Timestamp).toMillis();
+    const dateA = (a.date as Timestamp)?.toMillis() || Date.now();
+    const dateB = (b.date as Timestamp)?.toMillis() || Date.now();
     return dateB - dateA;
   });
 

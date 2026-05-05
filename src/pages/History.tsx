@@ -69,8 +69,8 @@ export default function History() {
 
     const combineAndSet = () => {
       const combined = [...incomes, ...expenses].sort((a, b) => {
-        const dateA = (a.date as Timestamp).toMillis();
-        const dateB = (b.date as Timestamp).toMillis();
+        const dateA = (a.date as Timestamp)?.toMillis() || Date.now();
+        const dateB = (b.date as Timestamp)?.toMillis() || Date.now();
         return dateB - dateA;
       });
       setTransactions(combined);
@@ -158,7 +158,7 @@ export default function History() {
                       <div>
                          <p className="text-sm font-semibold text-star-white">{transaction.source || 'No Note'}</p>
                          <p className="text-[10px] text-xavier-blue/60 uppercase tracking-wider">
-                            {format((transaction.date as Timestamp).toDate(), 'dd MMM yyyy HH:mm')}
+                            {(transaction.date as Timestamp)?.toDate ? format((transaction.date as Timestamp).toDate(), 'dd MMM yyyy HH:mm') : 'Syncing...'}
                          </p>
                       </div>
                    </div>
@@ -208,10 +208,10 @@ export default function History() {
                            <td className="px-8 py-6">
                               <div className="space-y-0.5">
                                  <p className="text-sm font-medium text-star-white">
-                                    {format((transaction.date as Timestamp).toDate(), 'dd MMMM yyyy')}
+                                    {(transaction.date as Timestamp)?.toDate ? format((transaction.date as Timestamp).toDate(), 'dd MMMM yyyy') : 'Syncing...'}
                                  </p>
                                  <p className="text-[10px] text-xavier-blue/60 uppercase tracking-wider">
-                                    {format((transaction.date as Timestamp).toDate(), 'HH:mm:ss')}
+                                    {(transaction.date as Timestamp)?.toDate ? format((transaction.date as Timestamp).toDate(), 'HH:mm:ss') : '...'}
                                  </p>
                               </div>
                            </td>

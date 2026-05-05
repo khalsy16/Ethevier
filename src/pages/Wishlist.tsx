@@ -95,6 +95,7 @@ export default function Wishlist() {
           name,
           price: parseFloat(price),
           link,
+          userId: user.uid,
           deadline: deadline ? Timestamp.fromDate(new Date(deadline)) : null,
           notes,
           status: 'pending',

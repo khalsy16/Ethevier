@@ -78,12 +78,13 @@ service cloud.firestore {
     }
 
     function isValidSalesRecap(data) {
-      return data.keys().hasAll(['customerName', 'booth', 'items', 'fee', 'createdAt']) &&
+      return data.keys().hasAll(['customerName', 'booth', 'items', 'fee', 'userId', 'createdAt']) &&
              data.customerName is string &&
              data.booth is string &&
              data.items is list &&
              data.items.size() > 0 &&
-             data.fee is number;
+             data.fee is number &&
+             data.userId == request.auth.uid;
     }
 
     // --- Rules ---

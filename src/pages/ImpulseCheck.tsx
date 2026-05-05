@@ -96,6 +96,7 @@ export default function ImpulseCheck() {
           name,
           price: parseFloat(price),
           reason,
+          userId: user.uid,
           waitDays: parseInt(waitDays),
           status: 'considering',
           createdAt: serverTimestamp()

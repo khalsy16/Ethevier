@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
+import * as XLSX from 'xlsx';
 import { 
   collection, 
   query, 
@@ -10,7 +11,8 @@ import {
   deleteDoc, 
   doc, 
   serverTimestamp,
-  updateDoc
+  updateDoc,
+  Timestamp
 } from 'firebase/firestore';
 import { 
   Table as TableIcon, 
@@ -145,6 +147,7 @@ export default function SalesRecap() {
       booth,
       items,
       fee: Number(fee),
+      userId: user.uid,
       noInvoice,
       createdAt: serverTimestamp()
     };
@@ -181,6 +184,36 @@ export default function SalesRecap() {
     }
   };
 
+  const exportToExcel = () => {
+    if (sales.length === 0) return;
+
+    const data = sales.flatMap((sale, saleIdx) => {
+      const totalPrice = sale.items.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+      const finalPrice = totalPrice + (Number(sale.fee) || 0);
+      const createdAt = (sale.createdAt as Timestamp)?.toDate() || new Date();
+
+      return sale.items.map((item, itemIdx) => ({
+        'NO': itemIdx === 0 ? saleIdx + 1 : '',
+        'DATE': itemIdx === 0 ? createdAt.toLocaleDateString() : '',
+        'CUSTOMER (X)': itemIdx === 0 ? sale.customerName : '',
+        'BOOTH': itemIdx === 0 ? sale.booth : '',
+        'ITEM NAME': item.name,
+        'QTY': item.quantity,
+        'ITEM PRICE': item.price,
+        'TOTAL QTY': itemIdx === 0 ? sale.items.reduce((acc, curr) => acc + curr.quantity, 0) : '',
+        'TOTAL PRICE': itemIdx === 0 ? totalPrice : '',
+        'FEE': itemIdx === 0 ? sale.fee : '',
+        'FINAL PRICE': itemIdx === 0 ? finalPrice : '',
+        'NO INVOICE': itemIdx === 0 ? sale.noInvoice : ''
+      }));
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sales Recap');
+    XLSX.writeFile(workbook, `Sales_Recap_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -201,13 +234,22 @@ export default function SalesRecap() {
           </div>
           <p className="text-xavier-blue/70 italic text-sm">Detailed transaction summary in sheet format.</p>
         </div>
-        <button 
-          onClick={() => setShowAdd(true)}
-          className="px-6 py-3 bg-aether-gold text-celestial-dark font-bold rounded-2xl flex items-center gap-2 hover:scale-105 transition-all shadow-lg"
-        >
-          <Plus className="w-5 h-5" />
-          <span>New Entry</span>
-        </button>
+        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+          <button 
+            onClick={exportToExcel}
+            className="px-6 py-3 bg-white/5 text-xavier-blue border border-white/10 font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-white/10 transition-all"
+          >
+            <Download className="w-5 h-5" />
+            <span>Export Excel</span>
+          </button>
+          <button 
+            onClick={() => setShowAdd(true)}
+            className="px-6 py-3 bg-aether-gold text-celestial-dark font-bold rounded-2xl flex items-center justify-center gap-2 hover:scale-105 transition-all shadow-lg"
+          >
+            <Plus className="w-5 h-5" />
+            <span>New Entry</span>
+          </button>
+        </div>
       </div>
 
       <div className="bg-white/5 border border-white/10 rounded-[2rem] overflow-x-auto shadow-2xl">
