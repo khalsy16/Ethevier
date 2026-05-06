@@ -36,6 +36,21 @@ export default function Wishlist() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const handleFirestoreError = (error: unknown, operationType: string, path: string | null) => {
+    const errInfo = {
+      error: error instanceof Error ? error.message : String(error),
+      authInfo: {
+        userId: user?.uid,
+        email: user?.email,
+        emailVerified: user?.emailVerified,
+      },
+      operationType,
+      path
+    };
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+    // Optional: show a user-friendly alert or notification
+  };
+
   // Form State
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
@@ -80,9 +95,10 @@ export default function Wishlist() {
     e.preventDefault();
     if (!user || !name || !price) return;
 
+    const wishlistPath = `users/${user.uid}/wishlist`;
     try {
       if (editingItem) {
-        await updateDoc(doc(db, 'users', user.uid, 'wishlist', editingItem.id), {
+        await updateDoc(doc(db, wishlistPath, editingItem.id), {
           name,
           price: parseFloat(price),
           link,
@@ -91,7 +107,7 @@ export default function Wishlist() {
           updatedAt: serverTimestamp()
         });
       } else {
-        await addDoc(collection(db, 'users', user.uid, 'wishlist'), {
+        await addDoc(collection(db, wishlistPath), {
           name,
           price: parseFloat(price),
           link,
@@ -104,7 +120,7 @@ export default function Wishlist() {
       }
       resetForm();
     } catch (error) {
-      console.error(error);
+      handleFirestoreError(error, editingItem ? 'update' : 'create', wishlistPath);
     }
   };
 
@@ -119,39 +135,48 @@ export default function Wishlist() {
   };
 
   const openEdit = (item: any) => {
-    setEditingItem(item);
-    setName(item.name);
-    setPrice(item.price.toString());
-    setLink(item.link || '');
-    if (item.deadline) {
-      const date = (item.deadline as Timestamp).toDate();
-      setDeadline(date.toISOString().split('T')[0]);
-    } else {
-      setDeadline('');
+    try {
+      setEditingItem(item);
+      setName(item.name || '');
+      setPrice(item.price?.toString() || '');
+      setLink(item.link || '');
+      if (item.deadline) {
+        const date = (item.deadline as Timestamp).toDate ? (item.deadline as Timestamp).toDate() : new Date(item.deadline);
+        if (!isNaN(date.getTime())) {
+          setDeadline(date.toISOString().split('T')[0]);
+        } else {
+          setDeadline('');
+        }
+      } else {
+        setDeadline('');
+      }
+      setNotes(item.notes || '');
+      setShowAdd(true);
+    } catch (error) {
+      console.error("Error opening edit modal:", error);
     }
-    setNotes(item.notes || '');
-    setShowAdd(true);
   };
 
   const toggleStatus = async (id: string, currentStatus: string) => {
     if (!user) return;
+    const wishlistPath = `users/${user.uid}/wishlist`;
     try {
-      await updateDoc(doc(db, 'users', user.uid, 'wishlist', id), {
+      await updateDoc(doc(db, wishlistPath, id), {
         status: currentStatus === 'pending' ? 'attained' : 'pending'
       });
     } catch (error) {
-      console.error(error);
+      handleFirestoreError(error, 'update', wishlistPath);
     }
   };
 
   const deleteItem = async (id: string | undefined) => {
     if (!user || !id) return;
-    
+    const wishlistPath = `users/${user.uid}/wishlist`;
     try {
-      await deleteDoc(doc(db, 'users', user.uid, 'wishlist', id));
+      await deleteDoc(doc(db, wishlistPath, id));
       setDeletingId(null);
     } catch (error) {
-      console.error("Error deleting wishlist item:", error);
+      handleFirestoreError(error, 'delete', wishlistPath);
     }
   };
 
@@ -203,23 +228,23 @@ export default function Wishlist() {
                        <Heart className={item.status === 'attained' ? 'fill-green-400 text-green-400' : ''} />
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => openEdit(item)} className="p-2 text-xavier-blue/40 hover:text-aether-gold transition-colors">
-                        <Pencil className="w-4 h-4" />
+                      <button onClick={() => openEdit(item)} className="p-3 text-xavier-blue/40 hover:text-aether-gold hover:bg-white/5 rounded-xl transition-all">
+                        <Pencil className="w-5 h-5" />
                       </button>
                       <div className="relative">
                         {deletingId === item.id ? (
-                          <div className="absolute right-0 top-0 flex items-center bg-red-500 rounded-lg overflow-hidden shadow-lg z-10">
+                          <div className="absolute right-0 top-0 flex items-center bg-red-500 rounded-xl overflow-hidden shadow-lg z-10">
                             <button 
                               onClick={() => deleteItem(item.id)}
-                              className="px-3 py-2 text-[10px] font-bold text-white uppercase tracking-tighter hover:bg-red-600 transition-colors"
+                              className="px-4 py-3 text-xs font-bold text-white uppercase tracking-tighter hover:bg-red-600 transition-colors"
                             >
                               Delete
                             </button>
                             <button 
                               onClick={() => setDeletingId(null)}
-                              className="px-2 py-2 bg-black/20 text-white hover:bg-black/40 transition-colors"
+                              className="px-3 py-3 bg-black/20 text-white hover:bg-black/40 transition-colors"
                             >
-                              <X className="w-3 h-3" />
+                              <X className="w-4 h-4" />
                             </button>
                           </div>
                         ) : (
@@ -228,14 +253,14 @@ export default function Wishlist() {
                               e.stopPropagation();
                               setDeletingId(item.id);
                             }} 
-                            className="p-2 text-xavier-blue/40 hover:text-red-400 transition-colors"
+                            className="p-3 text-xavier-blue/40 hover:text-red-400 hover:bg-white/5 rounded-xl transition-all"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-5 h-5" />
                           </button>
                         )}
                       </div>
-                      <button onClick={() => toggleStatus(item.id, item.status)} className={`p-2 rounded-lg transition-colors ${item.status === 'attained' ? 'bg-green-500 text-white' : 'bg-white/5 text-xavier-blue hover:text-green-400'}`}>
-                        <Check className="w-4 h-4" />
+                      <button onClick={() => toggleStatus(item.id, item.status)} className={`p-3 rounded-xl transition-all ${item.status === 'attained' ? 'bg-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'bg-white/5 text-xavier-blue hover:text-green-400 hover:bg-white/10'}`}>
+                        <Check className="w-5 h-5" />
                       </button>
                     </div>
                   </div>
@@ -291,7 +316,7 @@ export default function Wishlist() {
       {/* Add Modal */}
       <AnimatePresence>
         {showAdd && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 sm:p-0">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-0">
              <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
