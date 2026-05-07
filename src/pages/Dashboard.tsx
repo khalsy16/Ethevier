@@ -1,3 +1,5 @@
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { 
   collection, 
   onSnapshot, 
@@ -15,7 +17,8 @@ import {
   CreditCard,
   ArrowUpRight,
   Target,
-  ShieldAlert
+  ShieldAlert,
+  Download
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { format, startOfWeek, startOfMonth, startOfYear, isAfter } from 'date-fns';
@@ -157,6 +160,67 @@ export default function Dashboard() {
     }).format(amount);
   };
 
+  const exportHistoryToPDF = () => {
+    if (allActivity.length === 0) return;
+
+    const doc = new jsPDF();
+    const tableData = allActivity.map((activity, idx) => {
+      const date = (activity.date as Timestamp)?.toDate() || new Date();
+      return [
+        idx + 1,
+        format(date, 'dd MMM yyyy, HH:mm'),
+        activity.source || 'General',
+        activity.type === 'income' ? 'INCOME' : 'EXPENSE',
+        formatIDR(activity.amount).replace('Rp', '').trim()
+      ];
+    });
+
+    // Brand Header
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
+    
+    doc.setTextColor(255, 215, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(28);
+    doc.text('ETHEVIER', 14, 22);
+    
+    doc.setTextColor(148, 163, 184);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('FINANCIAL HISTORY REPORT', 14, 30);
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.text(user?.displayName?.toUpperCase() || 'USER REPORT', doc.internal.pageSize.width - 15, 22, { align: 'right' });
+    doc.setFontSize(9);
+    doc.text(`Generated: ${new Date().toLocaleString('id-ID')}`, doc.internal.pageSize.width - 15, 30, { align: 'right' });
+
+    autoTable(doc, {
+      startY: 45,
+      head: [['ID', 'DATE', 'SOURCE/CATEGORY', 'TYPE', 'AMOUNT']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 4 },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 15 },
+        3: { fontStyle: 'bold' },
+        4: { halign: 'right', fontStyle: 'bold' }
+      },
+      didParseCell: (data) => {
+        if (data.column.index === 3) {
+          if (data.cell.text[0] === 'INCOME') {
+            data.cell.styles.textColor = [34, 197, 94]; // Green
+          } else if (data.cell.text[0] === 'EXPENSE') {
+            data.cell.styles.textColor = [239, 68, 68]; // Red
+          }
+        }
+      }
+    });
+
+    doc.save(`Ethevier_History_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   const nextWishlist = wishlist
     .filter(item => item.status === 'pending')
     .sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds)[0];
@@ -206,7 +270,16 @@ export default function Dashboard() {
         <div className="lg:col-span-2 bg-celestial-depth/50 border border-white/10 rounded-[2.5rem] p-8">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-bold text-star-white">Recent Galaxy Activity</h3>
-            <button onClick={() => window.location.href = '/app/history'} className="text-sm text-aether-gold font-semibold hover:underline">View All</button>
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={exportHistoryToPDF}
+                className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-semibold text-xavier-blue hover:bg-white/10 transition-all"
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Export History</span>
+              </button>
+              <button onClick={() => window.location.href = '/app/history'} className="text-sm text-aether-gold font-semibold hover:underline">View All</button>
+            </div>
           </div>
           <div className="space-y-4">
             {allActivity.slice(0, 5).map((activity, idx) => (

@@ -23,7 +23,8 @@ import {
   X,
   FileSpreadsheet,
   Check,
-  Edit2
+  Edit2,
+  Sparkle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -74,6 +75,8 @@ export default function SalesRecap() {
   const [sales, setSales] = useState<SalesEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [eventName, setEventName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form State
@@ -201,7 +204,7 @@ export default function SalesRecap() {
     }
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = (eventTitle?: string) => {
     if (sales.length === 0) return;
 
     const doc = new jsPDF('landscape');
@@ -248,7 +251,7 @@ export default function SalesRecap() {
     doc.setTextColor(148, 163, 184); // Slate blue
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text('MAGICAL FINANCIAL RECAP', 14, 30);
+    doc.text(eventTitle ? `EVENT: ${eventTitle.toUpperCase()}` : 'MAGICAL FINANCIAL RECAP', 14, 30);
     
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(12);
@@ -296,7 +299,11 @@ export default function SalesRecap() {
       }
     });
 
-    doc.save(`Ethevier_Recap_${new Date().toISOString().split('T')[0]}.pdf`);
+    const fileName = eventTitle 
+      ? `Ethevier_${eventTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
+      : `Ethevier_Recap_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    doc.save(fileName);
   };
 
   const formatCurrency = (amount: number) => {
@@ -321,7 +328,7 @@ export default function SalesRecap() {
         </div>
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
           <button 
-            onClick={exportToPDF}
+            onClick={() => setShowEventModal(true)}
             className="px-6 py-3 bg-white/5 text-xavier-blue border border-white/10 font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-white/10 transition-all"
           >
             <Download className="w-5 h-5" />
@@ -544,6 +551,118 @@ export default function SalesRecap() {
                   </button>
                 </form>
              </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      {/* Event Name Modal */}
+      <AnimatePresence>
+        {showEventModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 sm:p-0">
+             <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowEventModal(false)}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              />
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                className="relative w-full max-w-md bg-[#0F172A] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-aether-gold/5 blur-[80px] -mr-16 -mt-16" />
+                <div className="relative space-y-6">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-2xl font-bold text-star-white">Event Name</h3>
+                    <button onClick={() => setShowEventModal(false)} className="p-2 text-xavier-blue/40 hover:text-star-white">
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Specify Event (Optional)</label>
+                      <input 
+                        type="text"
+                        value={eventName}
+                        onChange={(e) => setEventName(e.target.value)}
+                        placeholder="e.g. Comifuro 18, Popcon, etc."
+                        className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-star-white focus:outline-none focus:border-aether-gold/50"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => {
+                      exportToPDF(eventName);
+                      setShowEventModal(false);
+                      setEventName('');
+                    }}
+                    className="w-full py-4 bg-aether-gold text-deep-void font-bold rounded-2xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
+                  >
+                    <Sparkle className="w-5 h-5" />
+                    Generate PDF
+                  </button>
+                </div>
+              </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      {/* Event Name Modal */}
+      <AnimatePresence>
+        {showEventModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 sm:p-0">
+             <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowEventModal(false)}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              />
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                className="relative w-full max-w-md bg-[#0F172A] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-aether-gold/5 blur-[80px] -mr-16 -mt-16" />
+                <div className="relative space-y-6">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-2xl font-bold text-star-white">Event Name</h3>
+                    <button onClick={() => setShowEventModal(false)} className="p-2 text-xavier-blue/40 hover:text-star-white">
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Specify Event (Optional)</label>
+                      <input 
+                        type="text"
+                        value={eventName}
+                        onChange={(e) => setEventName(e.target.value)}
+                        placeholder="e.g. Comifuro 18, Popcon, etc."
+                        className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-star-white focus:outline-none focus:border-aether-gold/50"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => {
+                      exportToPDF(eventName);
+                      setShowEventModal(false);
+                      setEventName('');
+                    }}
+                    className="w-full py-4 bg-aether-gold text-deep-void font-bold rounded-2xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
+                  >
+                    <Sparkle className="w-5 h-5" />
+                    Generate PDF
+                  </button>
+                </div>
+              </motion.div>
           </div>
         )}
       </AnimatePresence>
