@@ -8,26 +8,43 @@ import { Sparkles, Coins, CheckCircle2 } from 'lucide-react';
 export default function AddIncome() {
   const [user] = useAuthState(auth);
   const [amount, setAmount] = useState('');
+  const [displayAmount, setDisplayAmount] = useState('');
   const [source, setSource] = useState('');
   const [type, setType] = useState<'income' | 'expense'>('income');
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
+  const formatNumber = (value: string) => {
+    // Remove non-digit characters
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return '';
+    // Format with dots
+    return new Intl.NumberFormat('id-ID').format(parseInt(digits));
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, '');
+    setAmount(rawValue);
+    setDisplayAmount(formatNumber(e.target.value));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !amount || parseFloat(amount) <= 0) return;
+    const rawAmount = parseFloat(amount);
+    if (!user || !amount || rawAmount <= 0) return;
 
     setLoading(true);
     try {
       const collectionName = type === 'income' ? 'incomes' : 'expenses';
       await addDoc(collection(db, 'users', user.uid, collectionName), {
-        amount: parseFloat(amount),
+        amount: rawAmount,
         source: source || (type === 'income' ? 'Daily Savings' : 'General Expense'),
         userId: user.uid,
         date: serverTimestamp(),
         createdAt: serverTimestamp()
       });
       setAmount('');
+      setDisplayAmount('');
       setSource('');
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
@@ -73,9 +90,9 @@ export default function AddIncome() {
               <div className="relative">
                 <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl sm:text-2xl font-bold text-aether-gold">Rp</span>
                 <input 
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  type="text"
+                  value={displayAmount}
+                  onChange={handleAmountChange}
                   placeholder="0"
                   className="w-full pl-16 pr-6 py-4 sm:py-6 bg-white/5 border border-white/10 rounded-2xl text-xl sm:text-2xl font-bold text-star-white focus:outline-none focus:border-aether-gold/50 transition-all placeholder:text-white/10"
                   required

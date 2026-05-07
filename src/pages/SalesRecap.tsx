@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { 
   collection, 
   query, 
@@ -137,6 +138,22 @@ export default function SalesRecap() {
     setItems(newItems);
   };
 
+  const formatIDNumber = (value: string | number) => {
+    const digits = value.toString().replace(/\D/g, '');
+    if (!digits) return '';
+    return new Intl.NumberFormat('id-ID').format(parseInt(digits));
+  };
+
+  const handlePriceChange = (index: number, value: string) => {
+    const rawValue = value.replace(/\D/g, '');
+    handleItemChange(index, 'price', parseInt(rawValue) || 0);
+  };
+
+  const handleFeeChange = (value: string) => {
+    const rawValue = value.replace(/\D/g, '');
+    setFee(parseInt(rawValue) || 0);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -184,34 +201,72 @@ export default function SalesRecap() {
     }
   };
 
-  const exportToExcel = () => {
+  const exportToPDF = () => {
     if (sales.length === 0) return;
 
-    const data = sales.flatMap((sale, saleIdx) => {
+    const doc = new jsPDF('landscape');
+    const tableData: any[][] = [];
+    
+    // Sort sales by date ascending for the report
+    const sortedSales = [...sales].sort((a, b) => {
+      const dateA = (a.createdAt as Timestamp)?.toMillis() || 0;
+      const dateB = (b.createdAt as Timestamp)?.toMillis() || 0;
+      return dateA - dateB;
+    });
+
+    sortedSales.forEach((sale, saleIdx) => {
       const totalPrice = sale.items.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
       const finalPrice = totalPrice + (Number(sale.fee) || 0);
       const createdAt = (sale.createdAt as Timestamp)?.toDate() || new Date();
 
-      return sale.items.map((item, itemIdx) => ({
-        'NO': itemIdx === 0 ? saleIdx + 1 : '',
-        'DATE': itemIdx === 0 ? createdAt.toLocaleDateString() : '',
-        'CUSTOMER (X)': itemIdx === 0 ? sale.customerName : '',
-        'BOOTH': itemIdx === 0 ? sale.booth : '',
-        'ITEM NAME': item.name,
-        'QTY': item.quantity,
-        'ITEM PRICE': item.price,
-        'TOTAL QTY': itemIdx === 0 ? sale.items.reduce((acc, curr) => acc + curr.quantity, 0) : '',
-        'TOTAL PRICE': itemIdx === 0 ? totalPrice : '',
-        'FEE': itemIdx === 0 ? sale.fee : '',
-        'FINAL PRICE': itemIdx === 0 ? finalPrice : '',
-        'NO INVOICE': itemIdx === 0 ? sale.noInvoice : ''
-      }));
+      sale.items.forEach((item, itemIdx) => {
+        const row = [
+          itemIdx === 0 ? saleIdx + 1 : '',
+          itemIdx === 0 ? sale.customerName : '',
+          itemIdx === 0 ? sale.booth : '',
+          item.name,
+          item.quantity,
+          formatCurrency(item.price),
+          itemIdx === 0 ? sale.items.reduce((acc, curr) => acc + curr.quantity, 0) : '',
+          itemIdx === 0 ? formatCurrency(totalPrice) : '',
+          itemIdx === 0 ? formatCurrency(sale.fee) : '',
+          itemIdx === 0 ? formatCurrency(finalPrice) : '',
+          itemIdx === 0 ? sale.noInvoice : ''
+        ];
+        tableData.push(row);
+      });
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sales Recap');
-    XLSX.writeFile(workbook, `Sales_Recap_${new Date().toISOString().split('T')[0]}.xlsx`);
+    doc.setFontSize(18);
+    doc.text('Sales Recap Report', 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+
+    autoTable(doc, {
+      startY: 35,
+      head: [['NO', 'CUSTOMER (X)', 'BOOTH', 'ITEM NAME', 'QTY', 'PRICE', 'T. QTY', 'T. PRICE', 'FEE', 'FINAL', 'INV']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { fontSize: 8, cellPadding: 2, font: 'helvetica' },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 10 },
+        4: { halign: 'center' },
+        5: { halign: 'right' },
+        6: { halign: 'center' },
+        7: { halign: 'right' },
+        8: { halign: 'right' },
+        9: { halign: 'right', fontStyle: 'bold' },
+        10: { halign: 'center' }
+      },
+      didDrawPage: (data) => {
+        doc.setFontSize(10);
+        doc.text(`Page ${doc.getNumberOfPages()}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
+      }
+    });
+
+    doc.save(`Sales_Recap_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const formatCurrency = (amount: number) => {
@@ -236,11 +291,11 @@ export default function SalesRecap() {
         </div>
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
           <button 
-            onClick={exportToExcel}
+            onClick={exportToPDF}
             className="px-6 py-3 bg-white/5 text-xavier-blue border border-white/10 font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-white/10 transition-all"
           >
             <Download className="w-5 h-5" />
-            <span>Export Excel</span>
+            <span>Export PDF</span>
           </button>
           <button 
             onClick={() => setShowAdd(true)}
@@ -411,9 +466,9 @@ export default function SalesRecap() {
                         </div>
                         <div className="flex-2 space-y-1">
                           <input 
-                            type="number"
-                            value={item.price}
-                            onChange={e => handleItemChange(idx, 'price', parseInt(e.target.value) || 0)}
+                            type="text"
+                            value={formatIDNumber(item.price)}
+                            onChange={e => handlePriceChange(idx, e.target.value)}
                             placeholder="Price"
                             className="w-full px-4 py-2 text-sm bg-white/5 border border-white/10 rounded-xl text-star-white focus:outline-none"
                             required
@@ -436,9 +491,9 @@ export default function SalesRecap() {
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Fee (IDR)</label>
                         <input 
-                          type="number"
-                          value={fee}
-                          onChange={e => setFee(parseInt(e.target.value) || 0)}
+                          type="text"
+                          value={formatIDNumber(fee)}
+                          onChange={e => handleFeeChange(e.target.value)}
                           className="w-full px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-star-white focus:outline-none focus:border-red-400/50"
                           required
                         />
