@@ -217,7 +217,6 @@ export default function SalesRecap() {
     sortedSales.forEach((sale, saleIdx) => {
       const totalPrice = sale.items.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
       const finalPrice = totalPrice + (Number(sale.fee) || 0);
-      const createdAt = (sale.createdAt as Timestamp)?.toDate() || new Date();
 
       sale.items.forEach((item, itemIdx) => {
         const row = [
@@ -226,47 +225,78 @@ export default function SalesRecap() {
           itemIdx === 0 ? sale.booth : '',
           item.name,
           item.quantity,
-          formatCurrency(item.price),
+          formatCurrency(item.price).replace('Rp', '').trim(),
           itemIdx === 0 ? sale.items.reduce((acc, curr) => acc + curr.quantity, 0) : '',
-          itemIdx === 0 ? formatCurrency(totalPrice) : '',
-          itemIdx === 0 ? formatCurrency(sale.fee) : '',
-          itemIdx === 0 ? formatCurrency(finalPrice) : '',
+          itemIdx === 0 ? formatCurrency(totalPrice).replace('Rp', '').trim() : '',
+          itemIdx === 0 ? formatCurrency(sale.fee).replace('Rp', '').trim() : '',
+          itemIdx === 0 ? formatCurrency(finalPrice).replace('Rp', '').trim() : '',
           itemIdx === 0 ? sale.noInvoice : ''
         ];
         tableData.push(row);
       });
     });
 
-    doc.setFontSize(18);
-    doc.text('Sales Recap Report', 14, 22);
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+    // Add Brand Header
+    doc.setFillColor(15, 23, 42); // Deep Dark
+    doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
+    
+    doc.setTextColor(255, 215, 0); // Gold
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(28);
+    doc.text('ETHEVIER', 14, 22);
+    
+    doc.setTextColor(148, 163, 184); // Slate blue
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('MAGICAL FINANCIAL RECAP', 14, 30);
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.text(`REPORT DATE: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, doc.internal.pageSize.width - 15, 22, { align: 'right' });
+    doc.setFontSize(9);
+    doc.text(`Generated at: ${new Date().toLocaleTimeString('id-ID')}`, doc.internal.pageSize.width - 15, 30, { align: 'right' });
 
     autoTable(doc, {
-      startY: 35,
-      head: [['NO', 'CUSTOMER (X)', 'BOOTH', 'ITEM NAME', 'QTY', 'PRICE', 'T. QTY', 'T. PRICE', 'FEE', 'FINAL', 'INV']],
+      startY: 45,
+      head: [['ID', 'CUSTOMER', 'BOOTH', 'ITEM NAME', 'QTY', 'PRICE', 'T. QTY', 'T. PRICE', 'FEE', 'FINAL', 'INV']],
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
-      styles: { fontSize: 8, cellPadding: 2, font: 'helvetica' },
+      headStyles: { 
+        fillColor: [30, 41, 59], 
+        textColor: [255, 255, 255], 
+        fontStyle: 'bold', 
+        fontSize: 9,
+        halign: 'center'
+      },
+      styles: { 
+        fontSize: 8, 
+        cellPadding: 3, 
+        font: 'helvetica',
+        valign: 'middle'
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252]
+      },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 10 },
-        4: { halign: 'center' },
-        5: { halign: 'right' },
-        6: { halign: 'center' },
-        7: { halign: 'right' },
-        8: { halign: 'right' },
-        9: { halign: 'right', fontStyle: 'bold' },
-        10: { halign: 'center' }
+        0: { halign: 'center', fontStyle: 'bold', cellWidth: 10 },
+        1: { fontStyle: 'italic', cellWidth: 35 },
+        2: { halign: 'center', cellWidth: 20 },
+        4: { halign: 'center', cellWidth: 15 },
+        5: { halign: 'right', cellWidth: 25 },
+        6: { halign: 'center', fontStyle: 'bold', cellWidth: 15 },
+        7: { halign: 'right', cellWidth: 25 },
+        8: { halign: 'right', textColor: [220, 38, 38], cellWidth: 20 },
+        9: { halign: 'right', fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 30 },
+        10: { halign: 'center', cellWidth: 15 }
       },
       didDrawPage: (data) => {
-        doc.setFontSize(10);
-        doc.text(`Page ${doc.getNumberOfPages()}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`Ethevier Financial Service - Page ${doc.getNumberOfPages()}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
       }
     });
 
-    doc.save(`Sales_Recap_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`Ethevier_Recap_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const formatCurrency = (amount: number) => {
