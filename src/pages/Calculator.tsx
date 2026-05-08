@@ -83,6 +83,14 @@ export default function Calculator() {
     }).format(amount);
   };
 
+  const formatDisplayValue = (val: string) => {
+    if (val === '0') return '0';
+    if (!val) return '0';
+    const parts = val.split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return parts.join(',');
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-8 sm:space-y-12">
       <div>
@@ -95,11 +103,11 @@ export default function Calculator() {
         <div className="bg-celestial-depth/80 border border-white/10 p-6 sm:p-8 rounded-[2.5rem] sm:rounded-[3rem] shadow-2xl backdrop-blur-xl">
            <div className="bg-white/5 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 text-right overflow-hidden border border-white/5">
               <p className="text-[10px] sm:text-xs font-bold text-xavier-blue/40 uppercase tracking-widest mb-1 h-4">
-                 {prevValue !== null ? `${prevValue} ${operator || ''}` : ''}
+                 {prevValue !== null ? `${formatDisplayValue(String(prevValue))} ${operator || ''}` : ''}
               </p>
               <div className="flex items-end justify-end gap-2">
                  <span className="text-lg sm:text-xl font-bold text-aether-gold/40 mb-1 sm:mb-2">{exchangeToIdr[selectedCurrency].symbol}</span>
-                 <p className="text-3xl sm:text-5xl font-black text-star-white truncate">{display}</p>
+                 <p className="text-3xl sm:text-5xl font-black text-star-white truncate">{formatDisplayValue(display)}</p>
               </div>
            </div>
 

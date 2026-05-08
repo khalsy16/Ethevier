@@ -3,7 +3,9 @@ import { db, auth } from '../lib/firebase';
 import { collection, onSnapshot, query, orderBy, Timestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { format } from 'date-fns';
-import { History as HistoryIcon, Trash2, ArrowUpRight, Search, Filter, Edit2, X, Save } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { History as HistoryIcon, Trash2, ArrowUpRight, Search, Filter, Edit2, X, Save, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function History() {
@@ -20,6 +22,17 @@ export default function History() {
     setEditingTransaction(transaction);
     setEditAmount(transaction.amount.toString());
     setEditSource(transaction.source || '');
+  };
+
+  const formatInputNumber = (value: string | number) => {
+    const digits = value.toString().replace(/\D/g, '');
+    if (!digits) return '';
+    return new Intl.NumberFormat('id-ID').format(parseInt(digits));
+  };
+
+  const handleAmountEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, '');
+    setEditAmount(rawValue);
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
@@ -106,6 +119,78 @@ export default function History() {
     }
   };
 
+  const exportToPDF = () => {
+    if (filteredTransactions.length === 0) return;
+
+    const doc = new jsPDF();
+    const tableData = filteredTransactions.map((t, idx) => {
+      const date = (t.date as Timestamp)?.toDate() || new Date();
+      return [
+        idx + 1,
+        format(date, 'dd MMM yyyy, HH:mm'),
+        t.source || 'General',
+        t.type === 'income' ? 'INCOME' : 'EXPENSE',
+        formatIDR(t.amount).replace('Rp', '').trim()
+      ];
+    });
+
+    // Add Brand Header (Matching SalesRecap style)
+    doc.setFillColor(15, 23, 42); // Deep Dark
+    doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
+    
+    doc.setTextColor(255, 215, 0); // Gold
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(28);
+    doc.text('ETHEVIER', 14, 22);
+    
+    doc.setTextColor(148, 163, 184); // Slate blue
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('COMPLETE FINANCIAL HISTORY REPORT', 14, 30);
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.text(user?.displayName?.toUpperCase() || 'USER HISTORY', doc.internal.pageSize.width - 15, 22, { align: 'right' });
+    doc.setFontSize(9);
+    doc.text(`Generated: ${new Date().toLocaleString('id-ID')}`, doc.internal.pageSize.width - 15, 30, { align: 'right' });
+
+    autoTable(doc, {
+      startY: 45,
+      head: [['ID', 'DATE', 'SOURCE / DESCRIPTION', 'TYPE', 'AMOUNT']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { 
+        fillColor: [30, 41, 59], 
+        textColor: [255, 255, 255], 
+        fontStyle: 'bold',
+        fontSize: 10
+      },
+      styles: { fontSize: 9, cellPadding: 4 },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 15 },
+        1: { cellWidth: 40 },
+        3: { fontStyle: 'bold', halign: 'center' },
+        4: { halign: 'right', fontStyle: 'bold' }
+      },
+      didParseCell: (data) => {
+        if (data.column.index === 3) {
+          if (data.cell.text[0] === 'INCOME') {
+            data.cell.styles.textColor = [34, 197, 94]; // Green
+          } else if (data.cell.text[0] === 'EXPENSE') {
+            data.cell.styles.textColor = [239, 68, 68]; // Red
+          }
+        }
+      },
+      didDrawPage: (data) => {
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`Ethevier Financial Service - Page ${doc.getNumberOfPages()}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
+      }
+    });
+
+    doc.save(`Ethevier_History_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   if (loading) return <div className="p-8 text-xavier-blue">Tracking past star trails...</div>;
 
   return (
@@ -119,15 +204,24 @@ export default function History() {
            <p className="text-xavier-blue/70">The light trails of your prosperity over time.</p>
         </div>
 
-        <div className="relative group w-full md:w-80">
-           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-xavier-blue/40 group-focus-within:text-aether-gold transition-colors" />
-           <input 
-             type="text"
-             value={searchTerm}
-             onChange={e => setSearchTerm(e.target.value)}
-             placeholder="Search transactions..."
-             className="w-full pl-12 pr-6 py-3 bg-celestial-depth border border-white/10 rounded-2xl text-star-white focus:outline-none focus:border-aether-gold/50 transition-all"
-           />
+        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+          <button 
+            onClick={exportToPDF}
+            className="px-6 py-3 bg-white/5 text-xavier-blue border border-white/10 font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-white/10 transition-all"
+          >
+            <Download className="w-5 h-5" />
+            <span>Export PDF</span>
+          </button>
+          <div className="relative group w-full sm:w-80">
+             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-xavier-blue/40 group-focus-within:text-aether-gold transition-colors" />
+             <input 
+               type="text"
+               value={searchTerm}
+               onChange={e => setSearchTerm(e.target.value)}
+               placeholder="Search transactions..."
+               className="w-full pl-12 pr-6 py-3 bg-celestial-depth border border-white/10 rounded-2xl text-star-white focus:outline-none focus:border-aether-gold/50 transition-all"
+             />
+          </div>
         </div>
       </div>
 
@@ -287,9 +381,9 @@ export default function History() {
                     <div className="relative">
                       <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl font-bold text-aether-gold">Rp</span>
                       <input 
-                        type="number"
-                        value={editAmount}
-                        onChange={e => setEditAmount(e.target.value)}
+                        type="text"
+                        value={formatInputNumber(editAmount)}
+                        onChange={handleAmountEditChange}
                         className="w-full pl-16 pr-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-xl font-bold text-star-white focus:outline-none focus:border-aether-gold/50"
                         required
                       />
