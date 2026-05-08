@@ -54,6 +54,7 @@ export default function Wishlist() {
   // Form State
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
+  const [displayPrice, setDisplayPrice] = useState('');
   const [link, setLink] = useState('');
   const [deadline, setDeadline] = useState('');
   const [notes, setNotes] = useState('');
@@ -91,14 +92,26 @@ export default function Wishlist() {
     };
   }, [user]);
 
+  const formatDisplayNumber = (value: string | number) => {
+    const digits = value.toString().replace(/\D/g, '');
+    if (!digits) return '';
+    return new Intl.NumberFormat('id-ID').format(parseInt(digits));
+  };
+
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, '');
+    setPrice(rawValue);
+    setDisplayPrice(formatDisplayNumber(e.target.value));
+  };
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !name || !price) return;
 
-    const wishlistPath = `users/${user.uid}/wishlist`;
     try {
+      const wishlistRef = collection(db, 'users', user.uid, 'wishlist');
       if (editingItem) {
-        await updateDoc(doc(db, wishlistPath, editingItem.id), {
+        await updateDoc(doc(db, 'users', user.uid, 'wishlist', editingItem.id), {
           name,
           price: parseFloat(price),
           link,
@@ -107,7 +120,7 @@ export default function Wishlist() {
           updatedAt: serverTimestamp()
         });
       } else {
-        await addDoc(collection(db, wishlistPath), {
+        await addDoc(wishlistRef, {
           name,
           price: parseFloat(price),
           link,
@@ -120,13 +133,14 @@ export default function Wishlist() {
       }
       resetForm();
     } catch (error) {
-      handleFirestoreError(error, editingItem ? 'update' : 'create', wishlistPath);
+      handleFirestoreError(error, editingItem ? 'update' : 'create', `users/${user.uid}/wishlist`);
     }
   };
 
   const resetForm = () => {
     setName('');
     setPrice('');
+    setDisplayPrice('');
     setLink('');
     setDeadline('');
     setNotes('');
@@ -138,7 +152,9 @@ export default function Wishlist() {
     try {
       setEditingItem(item);
       setName(item.name || '');
-      setPrice(item.price?.toString() || '');
+      const priceVal = item.price?.toString() || '';
+      setPrice(priceVal);
+      setDisplayPrice(formatDisplayNumber(priceVal));
       setLink(item.link || '');
       if (item.deadline) {
         const date = (item.deadline as Timestamp).toDate ? (item.deadline as Timestamp).toDate() : new Date(item.deadline);
@@ -351,9 +367,9 @@ export default function Wishlist() {
                    <div className="space-y-2">
                       <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Price</label>
                       <input 
-                        type="number"
-                        value={price}
-                        onChange={e => setPrice(e.target.value)}
+                        type="text"
+                        value={displayPrice}
+                        onChange={handlePriceChange}
                         placeholder="0"
                         className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-star-white focus:outline-none focus:border-aether-gold/50"
                         required

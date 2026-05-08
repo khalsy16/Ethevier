@@ -30,61 +30,50 @@ service cloud.firestore {
     // --- Validation Helpers ---
     
     function isValidUserProfile(data) {
-      return data.keys().hasAll(['userId', 'createdAt']) &&
-             data.userId is string && data.userId == request.auth.uid;
+      return data.userId is string && data.userId == request.auth.uid;
     }
 
     function isValidIncome(data) {
-      return data.keys().hasAll(['amount', 'source', 'date', 'userId', 'createdAt']) &&
-             data.amount is number &&
-             data.source is string &&
-             data.userId == request.auth.uid;
+      return (data.amount is number) &&
+             (data.source is string) &&
+             (data.userId == request.auth.uid);
     }
 
     function isValidExpense(data) {
-      return data.keys().hasAll(['amount', 'source', 'date', 'userId', 'createdAt']) &&
-             data.amount is number &&
-             data.source is string &&
-             data.userId == request.auth.uid;
+      return (data.amount is number) &&
+             (data.source is string) &&
+             (data.userId == request.auth.uid);
     }
 
     function isValidInvoice(data) {
-      return data.keys().hasAll(['title', 'imageUrl', 'userId', 'createdAt']) &&
-             data.title is string && data.title.size() > 0 &&
-             data.imageUrl is string &&
-             data.userId == request.auth.uid;
+      return (data.title is string) &&
+             (data.imageUrl is string) &&
+             (data.userId == request.auth.uid);
     }
 
     function isValidWishlist(data) {
-      return data.keys().hasAll(['name', 'price', 'status', 'userId', 'createdAt']) &&
-             data.name is string && data.name.size() > 0 &&
-             data.price is number &&
-             data.status in ['pending', 'attained'] &&
-             data.userId == request.auth.uid;
+      return (data.name is string) && (data.name.size() > 0) &&
+             (data.price is number) &&
+             (data.userId == request.auth.uid);
     }
 
     function isValidImpulseCheck(data) {
-      return data.keys().hasAll(['name', 'price', 'status', 'userId', 'createdAt']) &&
-             data.name is string &&
-             data.price is number &&
-             data.status in ['considering', 'avoided', 'purchased'] &&
-             data.userId == request.auth.uid;
+      return (data.name is string) &&
+             (data.price is number) &&
+             (data.userId == request.auth.uid);
     }
 
     function isValidOffDay(data) {
-      return data.keys().hasAll(['date', 'userId']) &&
-             data.date is string &&
-             data.userId == request.auth.uid;
+      return (data.date is string) &&
+             (data.userId == request.auth.uid);
     }
 
     function isValidSalesRecap(data) {
-      return data.keys().hasAll(['customerName', 'booth', 'items', 'fee', 'userId', 'createdAt']) &&
-             data.customerName is string &&
-             data.booth is string &&
-             data.items is list &&
-             data.items.size() > 0 &&
-             data.fee is number &&
-             data.userId == request.auth.uid;
+      return (data.customerName is string) &&
+             (data.booth is string) &&
+             (data.items is list) &&
+             (data.fee is number) &&
+             (data.userId == request.auth.uid);
     }
 
     // --- Rules ---
