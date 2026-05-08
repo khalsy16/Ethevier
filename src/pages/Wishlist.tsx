@@ -225,7 +225,23 @@ export default function Wishlist() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         <AnimatePresence>
           {items.map((item, idx) => {
-             const progress = Math.min((totalIncome / item.price) * 100, 100);
+             const now = new Date().getTime();
+             const start = (item.createdAt as Timestamp)?.toMillis() || now;
+             const end = (item.deadline as Timestamp)?.toMillis();
+             
+             let progress = 0;
+             let isDeadlineBased = false;
+             
+             if (end) {
+               isDeadlineBased = true;
+               const total = end - start;
+               if (total > 0) {
+                 progress = Math.min(Math.max(((now - start) / total) * 100, 0), 100);
+               } else {
+                 progress = 100;
+               }
+             }
+
              return (
                 <motion.div 
                   key={item.id}
@@ -292,16 +308,20 @@ export default function Wishlist() {
                   <div className="space-y-4">
                     <div className="space-y-2">
                        <div className="flex justify-between text-xs text-xavier-blue font-semibold">
-                          <span>Galaxy Savings Progress</span>
-                          <span>{Math.round(progress)}%</span>
+                          <span>{isDeadlineBased ? 'Time to Star Goal' : 'No Deadline Set'}</span>
+                          {isDeadlineBased && <span>{Math.round(progress)}%</span>}
                        </div>
-                       <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                          <motion.div 
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progress}%` }}
-                            className={`h-full ${item.status === 'attained' ? 'bg-green-500' : 'bg-aether-gold'}`}
-                          />
-                       </div>
+                       {isDeadlineBased ? (
+                         <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                            <motion.div 
+                              initial={{ width: 0 }}
+                              animate={{ width: `${progress}%` }}
+                              className={`h-full ${item.status === 'attained' ? 'bg-green-500' : 'bg-aether-gold'}`}
+                            />
+                         </div>
+                       ) : (
+                         <div className="h-2 bg-white/5 rounded-full border border-dashed border-white/10" />
+                       )}
                     </div>
 
                     <div className="flex items-center justify-between pt-4 border-t border-white/5">
