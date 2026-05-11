@@ -20,7 +20,9 @@ import {
   Edit2, 
   Save, 
   Search,
-  Maximize2
+  Maximize2,
+  ArrowLeft,
+  Folder
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
@@ -30,6 +32,7 @@ interface Invoice {
   title: string;
   imageUrl: string;
   createdAt: any;
+  category?: string;
 }
 
 export default function InvoiceAlbum() {
@@ -42,12 +45,14 @@ export default function InvoiceAlbum() {
   // Form State
   const [title, setTitle] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [category, setCategory] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   
   // Selection
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -88,11 +93,13 @@ export default function InvoiceAlbum() {
       await addDoc(collection(db, 'users', user.uid, 'invoices'), {
         title,
         imageUrl,
+        category: category.trim() || 'General',
         userId: user.uid,
         createdAt: new Date()
       });
       setTitle('');
       setImageUrl('');
+      setCategory('');
       setShowAdd(false);
     } catch (error) {
       console.error(error);
@@ -132,6 +139,15 @@ export default function InvoiceAlbum() {
     inv.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const groupedInvoices = filteredInvoices.reduce((acc, inv) => {
+    const cat = inv.category || 'General';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(inv);
+    return acc;
+  }, {} as Record<string, Invoice[]>);
+
+  const folders = Object.keys(groupedInvoices).sort();
+
   if (loading) return <div className="p-8 text-xavier-blue">Opening your celestial archives...</div>;
 
   return (
@@ -139,10 +155,22 @@ export default function InvoiceAlbum() {
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
+            {selectedFolder && (
+              <button 
+                 onClick={() => setSelectedFolder(null)}
+                 className="p-2 bg-white/5 border border-white/10 rounded-xl text-xavier-blue hover:text-aether-gold transition-colors"
+               >
+                 <ArrowLeft className="w-5 h-5" />
+               </button>
+            )}
             <ImageIcon className="text-aether-gold" />
-            <h2 className="text-3xl font-bold text-star-white">Invoice Album</h2>
+            <h2 className="text-3xl font-bold text-star-white">
+              {selectedFolder ? selectedFolder : 'Invoice Album'}
+            </h2>
           </div>
-          <p className="text-xavier-blue/70">Visual echoes of your financial journey.</p>
+          <p className="text-xavier-blue/70">
+            {selectedFolder ? `${groupedInvoices[selectedFolder].length} Visual records preserved` : 'Visual echoes of your financial journey.'}
+          </p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
@@ -166,85 +194,123 @@ export default function InvoiceAlbum() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        <AnimatePresence>
-          {filteredInvoices.map((invoice, idx) => (
-            <motion.div
-              key={invoice.id}
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ delay: idx * 0.05 }}
-              className="group relative bg-celestial-depth border border-white/10 rounded-[2rem] overflow-hidden shadow-xl hover:shadow-aether-gold/5 transition-all"
+      {!selectedFolder ? (
+        // FOLDER VIEW
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          {folders.map(folder => (
+            <motion.button
+              key={folder}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={() => setSelectedFolder(folder)}
+              className="group relative flex flex-col items-center p-8 bg-celestial-depth/40 border border-white/5 rounded-[2.5rem] hover:bg-white/5 hover:border-aether-gold/30 transition-all text-center"
             >
-              {/* Image Preview */}
-              <div className="relative aspect-[4/3] overflow-hidden bg-black/20">
-                <img 
-                  src={invoice.imageUrl} 
-                  alt={invoice.title}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-celestial-dark/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                   <button 
-                     onClick={() => setSelectedInvoice(invoice)}
-                     className="p-3 bg-white/10 backdrop-blur-md rounded-full text-white hover:bg-white/20 transition-all"
-                   >
-                     <Maximize2 className="w-5 h-5" />
-                   </button>
-                   <button 
-                     onClick={() => handleDelete(invoice.id)}
-                     className="p-3 bg-red-500/20 backdrop-blur-md rounded-full text-red-400 hover:bg-red-500/40 transition-all"
-                   >
-                     <Trash2 className="w-5 h-5" />
-                   </button>
-                </div>
+              <div className="relative mb-4">
+                 <Folder className="w-16 h-16 text-aether-gold/40 group-hover:text-aether-gold/60 transition-colors fill-aether-gold/5" />
+                 <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-[10px] font-black text-white/40 group-hover:text-white/60">
+                      {groupedInvoices[folder].length}
+                    </span>
+                 </div>
               </div>
-
-              {/* Title Area */}
-              <div className="p-5">
-                {editingId === invoice.id ? (
-                  <div className="flex gap-2">
-                    <input 
-                      type="text"
-                      value={editTitle}
-                      onChange={e => setEditTitle(e.target.value)}
-                      className="flex-1 bg-white/5 border border-aether-gold/50 rounded-lg px-3 py-1 text-star-white text-sm focus:outline-none"
-                      autoFocus
-                    />
-                    <button 
-                      onClick={() => handleUpdateTitle(invoice.id)}
-                      className="p-1 text-green-400 hover:scale-110"
-                    >
-                      <Save className="w-5 h-5" />
-                    </button>
-                    <button 
-                      onClick={() => setEditingId(null)}
-                      className="p-1 text-red-400 hover:scale-110"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <div className="overflow-hidden">
-                      <h4 className="text-star-white font-bold truncate pr-2">{invoice.title}</h4>
-                      <p className="text-[10px] text-xavier-blue/40 uppercase tracking-widest font-medium">
-                        {invoice.createdAt?.toDate ? format(invoice.createdAt.toDate(), 'dd MMM yyyy') : 'Recently'}
-                      </p>
-                    </div>
-                    <button 
-                      onClick={() => handleStartEdit(invoice)}
-                      className="p-2 text-xavier-blue/20 hover:text-aether-gold transition-colors opacity-0 group-hover:opacity-100"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
+              <span className="text-xs font-black text-star-white uppercase tracking-widest truncate w-full px-2">
+                {folder}
+              </span>
+              <div className="mt-2 text-[8px] text-xavier-blue font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity">
+                Open Archive
               </div>
-            </motion.div>
+            </motion.button>
           ))}
-        </AnimatePresence>
+          {folders.length === 0 && (
+             <div className="col-span-full py-32 flex flex-col items-center justify-center text-center space-y-4 border-2 border-dashed border-white/5 rounded-[3rem]">
+                <ImageIcon className="text-xavier-blue/20 w-8 h-8" />
+                <p className="text-xavier-blue/40 italic">No memories stored in the archive yet.</p>
+             </div>
+          )}
+        </div>
+      ) : (
+        // ITEMS VIEW
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <AnimatePresence>
+            {groupedInvoices[selectedFolder].map((invoice, idx) => (
+              <motion.div
+                key={invoice.id}
+                layout
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ delay: idx * 0.05 }}
+                className="group relative bg-celestial-depth border border-white/10 rounded-[2rem] overflow-hidden shadow-xl hover:shadow-aether-gold/5 transition-all"
+              >
+                {/* Image Preview */}
+                <div className="relative aspect-[4/3] overflow-hidden bg-black/20">
+                  <img 
+                    src={invoice.imageUrl} 
+                    alt={invoice.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-celestial-dark/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                     <button 
+                       onClick={() => setSelectedInvoice(invoice)}
+                       className="p-3 bg-white/10 backdrop-blur-md rounded-full text-white hover:bg-white/20 transition-all"
+                     >
+                       <Maximize2 className="w-5 h-5" />
+                     </button>
+                     <button 
+                       onClick={() => handleDelete(invoice.id)}
+                       className="p-3 bg-red-500/20 backdrop-blur-md rounded-full text-red-400 hover:bg-red-500/40 transition-all"
+                     >
+                       <Trash2 className="w-5 h-5" />
+                     </button>
+                  </div>
+                </div>
+  
+                {/* Title Area */}
+                <div className="p-5">
+                  {editingId === invoice.id ? (
+                    <div className="flex gap-2">
+                      <input 
+                        type="text"
+                        value={editTitle}
+                        onChange={e => setEditTitle(e.target.value)}
+                        className="flex-1 bg-white/5 border border-aether-gold/50 rounded-lg px-3 py-1 text-star-white text-sm focus:outline-none"
+                        autoFocus
+                      />
+                      <button 
+                        onClick={() => handleUpdateTitle(invoice.id)}
+                        className="p-1 text-green-400 hover:scale-110"
+                      >
+                        <Save className="w-5 h-5" />
+                      </button>
+                      <button 
+                        onClick={() => setEditingId(null)}
+                        className="p-1 text-red-400 hover:scale-110"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="overflow-hidden">
+                        <h4 className="text-star-white font-bold truncate pr-2">{invoice.title}</h4>
+                        <p className="text-[10px] text-xavier-blue/40 uppercase tracking-widest font-medium">
+                          {invoice.createdAt?.toDate ? format(invoice.createdAt.toDate(), 'dd MMM yyyy') : 'Recently'}
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => handleStartEdit(invoice)}
+                        className="p-2 text-xavier-blue/20 hover:text-aether-gold transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
 
         {filteredInvoices.length === 0 && (
           <div className="col-span-full py-32 flex flex-col items-center justify-center text-center space-y-4">
@@ -257,7 +323,6 @@ export default function InvoiceAlbum() {
              </div>
           </div>
         )}
-      </div>
 
       {/* Add Modal */}
       <AnimatePresence>
@@ -312,6 +377,17 @@ export default function InvoiceAlbum() {
                       )}
                     </div>
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-xavier-blue uppercase tracking-[0.2em] px-2">Category (Folder)</label>
+                  <input 
+                    type="text"
+                    value={category}
+                    onChange={e => setCategory(e.target.value)}
+                    placeholder="e.g. Comifuro, Monthly, Hobby"
+                    className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-star-white focus:outline-none focus:border-aether-gold/50 transition-all font-medium"
+                  />
                 </div>
 
                 <div className="space-y-2">

@@ -16,7 +16,7 @@ service cloud.firestore {
     }
 
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
     function incoming() {
@@ -27,53 +27,62 @@ service cloud.firestore {
       return resource.data;
     }
 
-    // --- Validation Helpers ---
+    // --- Validation Blueprints ---
     
     function isValidUserProfile(data) {
-      return data.userId is string && data.userId == request.auth.uid;
+      return data.keys().hasAll(['userId', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.userId is string;
     }
 
     function isValidIncome(data) {
-      return (data.amount is number) &&
-             (data.source is string) &&
-             (data.userId == request.auth.uid);
+      return data.keys().hasAll(['userId', 'amount', 'date', 'createdAt']) &&
+             data.amount is number &&
+             data.userId == request.auth.uid;
     }
 
     function isValidExpense(data) {
-      return (data.amount is number) &&
-             (data.source is string) &&
-             (data.userId == request.auth.uid);
+      return data.keys().hasAll(['userId', 'amount', 'date', 'createdAt']) &&
+             data.amount is number &&
+             data.userId == request.auth.uid;
     }
 
     function isValidInvoice(data) {
-      return (data.title is string) &&
-             (data.imageUrl is string) &&
-             (data.userId == request.auth.uid);
+      return data.keys().hasAll(['userId', 'title', 'imageUrl', 'createdAt']) &&
+             data.title is string && data.title.size() <= 200 &&
+             (data.get('category', 'General') is string) &&
+             data.userId == request.auth.uid;
     }
 
     function isValidWishlist(data) {
-      return (data.name is string) && (data.name.size() > 0) &&
-             (data.price is number) &&
-             (data.userId == request.auth.uid);
+      return data.keys().hasAll(['userId', 'name', 'price', 'status', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 &&
+             data.price is number &&
+             (data.get('category', 'General') is string) &&
+             data.userId == request.auth.uid;
     }
 
     function isValidImpulseCheck(data) {
-      return (data.name is string) &&
-             (data.price is number) &&
-             (data.userId == request.auth.uid);
+      return data.keys().hasAll(['userId', 'name', 'price', 'status', 'createdAt']) &&
+             data.name is string &&
+             data.price is number &&
+             data.userId == request.auth.uid;
     }
 
     function isValidOffDay(data) {
-      return (data.date is string) &&
-             (data.userId == request.auth.uid);
+      return data.keys().hasAll(['userId', 'date']) &&
+             data.date is string &&
+             data.userId == request.auth.uid;
     }
 
     function isValidSalesRecap(data) {
-      return (data.customerName is string) &&
-             (data.booth is string) &&
-             (data.items is list) &&
-             (data.fee is number) &&
-             (data.userId == request.auth.uid);
+      return data.keys().hasAll(['customerName', 'booth', 'items', 'fee', 'createdAt', 'userId']) &&
+             data.customerName is string &&
+             data.booth is string &&
+             data.items is list &&
+             data.fee is number &&
+             (data.get('category', 'General') is string) &&
+             data.userId == request.auth.uid;
     }
 
     // --- Rules ---

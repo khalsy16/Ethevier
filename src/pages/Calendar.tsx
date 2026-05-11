@@ -84,8 +84,15 @@ export default function CalendarPage() {
 
   useEffect(() => {
     const amount = parseFloat(dailyProjection) || 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const activeDays = daysInMonth.filter(day => {
        const dateStr = format(day, 'yyyy-MM-dd');
+       // Don't count days that have already passed
+       const isPastDay = day < today;
+       if (isPastDay) return false;
+       
        return !isWeekend(day) && !holidays[dateStr] && !offDays.includes(dateStr);
     }).length;
     
@@ -148,6 +155,7 @@ export default function CalendarPage() {
                  const holidayName = holidays[dateStr];
                  const isOff = offDays.includes(dateStr);
                  const isWknd = isWeekend(day);
+                 const past = day < new Date(new Date().setHours(0,0,0,0));
 
                  // DEADLINES
                  const wishlistDeadlines = wishlist.filter(w => w.deadline && format(w.deadline.toDate(), 'yyyy-MM-dd') === dateStr);
@@ -162,7 +170,7 @@ export default function CalendarPage() {
                     <div 
                       key={dateStr} 
                       onClick={() => toggleOffDay(dateStr)}
-                      className={`bg-celestial-depth h-28 p-2 border-t border-white/5 relative group transition-all hover:bg-white/5 cursor-pointer ${!isSameMonth(day, currentDate) ? 'opacity-25' : ''} ${isOff ? 'bg-red-500/5' : ''}`}
+                      className={`bg-celestial-depth h-28 p-2 border-t border-white/5 relative group transition-all hover:bg-white/5 cursor-pointer ${!isSameMonth(day, currentDate) ? 'opacity-25' : ''} ${isOff ? 'bg-red-500/5' : ''} ${past ? 'opacity-40 grayscale-[0.5]' : ''}`}
                     >
                        <div className="flex justify-between items-start">
                           <span className={`text-sm font-semibold rounded-full w-6 h-6 flex items-center justify-center transition-colors ${
@@ -230,9 +238,9 @@ export default function CalendarPage() {
                  </div>
 
                  <div className="pt-6 border-t border-white/10">
-                    <p className="text-xs text-xavier-blue/60 mb-2 uppercase tracking-widest font-bold">Estimated Total This Month</p>
+                    <p className="text-xs text-xavier-blue/60 mb-2 uppercase tracking-widest font-bold">Remaining Estimate This Month</p>
                     <p className="text-3xl font-black text-aether-gold">{formatIDR(monthlyProjection)}</p>
-                    <p className="text-[10px] text-xavier-blue/40 mt-2 italic">*Only counts active days (Excludes weekends, National Holidays, and your chosen Special Holidays).</p>
+                    <p className="text-[10px] text-xavier-blue/40 mt-2 italic">*Only counts remaining active days (Today & Future, excluding weekends, National Holidays, and Special Holidays).</p>
                  </div>
               </div>
            </motion.div>

@@ -24,7 +24,9 @@ import {
   FileSpreadsheet,
   Check,
   Edit2,
-  Sparkle
+  Sparkle,
+  ArrowLeft,
+  Folder
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -67,6 +69,7 @@ interface SalesEntry {
   items: SalesItem[];
   fee: number;
   noInvoice: string;
+  category?: string;
   createdAt: any;
 }
 
@@ -78,10 +81,12 @@ export default function SalesRecap() {
   const [showEventModal, setShowEventModal] = useState(false);
   const [eventName, setEventName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
 
   // Form State
   const [customerName, setCustomerName] = useState('');
   const [booth, setBooth] = useState('');
+  const [category, setCategory] = useState('');
   const [fee, setFee] = useState(4000);
   const [noInvoice, setNoInvoice] = useState('');
   const [items, setItems] = useState<SalesItem[]>([{ name: '', quantity: 1, price: 0 }]);
@@ -162,20 +167,22 @@ export default function SalesRecap() {
     if (!user) return;
 
     const path = `users/${user.uid}/salesRecap`;
-    const saleData = {
+    const saleData: any = {
       customerName,
       booth,
+      category: category.trim() || 'General',
       items,
       fee: Number(fee),
       userId: user.uid,
       noInvoice,
-      createdAt: serverTimestamp()
+      updatedAt: serverTimestamp()
     };
 
     try {
       if (editingId) {
         await updateDoc(doc(db, path, editingId), saleData);
       } else {
+        saleData.createdAt = serverTimestamp();
         await addDoc(collection(db, path), saleData);
       }
       resetForm();
@@ -190,6 +197,7 @@ export default function SalesRecap() {
     setFee(4000);
     setNoInvoice('');
     setItems([{ name: '', quantity: 1, price: 0 }]);
+    setCategory('');
     setShowAdd(false);
     setEditingId(null);
   };
@@ -314,6 +322,15 @@ export default function SalesRecap() {
     }).format(amount);
   };
 
+  const groupedSales = sales.reduce((acc, sale) => {
+    const cat = sale.category || 'General';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(sale);
+    return acc;
+  }, {} as Record<string, SalesEntry[]>);
+
+  const saleCategories = Object.keys(groupedSales).sort();
+
   if (loading) return <div className="p-8 text-xavier-blue">Building report table...</div>;
 
   return (
@@ -321,10 +338,22 @@ export default function SalesRecap() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
+            {selectedEvent && (
+               <button 
+                 onClick={() => setSelectedEvent(null)}
+                 className="p-2 bg-white/5 border border-white/10 rounded-xl text-xavier-blue hover:text-aether-gold transition-colors"
+               >
+                 <ArrowLeft className="w-5 h-5" />
+               </button>
+            )}
             <FileSpreadsheet className="text-aether-gold" />
-            <h2 className="text-3xl font-bold text-star-white">Sales Recap</h2>
+            <h2 className="text-3xl font-bold text-star-white">
+              {selectedEvent ? selectedEvent : 'Sales Recap'}
+            </h2>
           </div>
-          <p className="text-xavier-blue/70 italic text-sm">Detailed transaction summary in sheet format.</p>
+          <p className="text-xavier-blue/70 italic text-sm">
+            {selectedEvent ? `${groupedSales[selectedEvent].length} Transactions recorded` : 'Detailed transaction summary in sheet format.'}
+          </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
           <button 
@@ -344,89 +373,146 @@ export default function SalesRecap() {
         </div>
       </div>
 
-      <div className="bg-white/5 border border-white/10 rounded-[2rem] overflow-x-auto shadow-2xl">
-        <table className="w-full text-xs text-left border-collapse min-w-[1000px]">
-          <thead>
-            <tr className="bg-celestial-depth/80 text-xavier-blue uppercase tracking-tighter font-black">
-              <th className="p-4 border border-white/5 text-center w-12">NO</th>
-              <th className="p-4 border border-white/5">X</th>
-              <th className="p-4 border border-white/5 text-center">BOOTH</th>
-              <th className="p-4 border border-white/5">ITEM NAME</th>
-              <th className="p-4 border border-white/5 text-center">QTY</th>
-              <th className="p-4 border border-white/5 text-right">ITEM PRICE</th>
-              <th className="p-4 border border-white/5 text-center">TOTAL QTY</th>
-              <th className="p-4 border border-white/5 text-right">TOTAL PRICE</th>
-              <th className="p-4 border border-white/5 text-center bg-red-500/20 text-red-300">FEE</th>
-              <th className="p-4 border border-white/5 text-right bg-white/5">FINAL PRICE</th>
-              <th className="p-4 border border-white/5 text-center">NO INVOICE</th>
-              <th className="p-4 border border-white/5 text-center">ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sales.map((sale, saleIdx) => {
-              const totalQty = sale.items.reduce((acc, curr) => acc + curr.quantity, 0);
-              const totalPrice = sale.items.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
-              const finalPrice = totalPrice + (Number(sale.fee) || 0);
+      {!selectedEvent ? (
+        // FOLDER VIEW
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          {saleCategories.map(cat => (
+            <motion.button
+              key={cat}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={() => setSelectedEvent(cat)}
+              className="group relative flex flex-col items-center p-8 bg-celestial-depth/40 border border-white/5 rounded-[2.5rem] hover:bg-white/5 hover:border-aether-gold/30 transition-all text-center"
+            >
+              <div className="relative mb-4">
+                 <Folder className="w-16 h-16 text-aether-gold/40 group-hover:text-aether-gold/60 transition-colors fill-aether-gold/5" />
+                 <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-[10px] font-black text-white/40 group-hover:text-white/60">
+                      {groupedSales[cat].length}
+                    </span>
+                 </div>
+              </div>
+              <span className="text-xs font-black text-star-white uppercase tracking-widest truncate w-full px-2">
+                {cat}
+              </span>
+              <div className="mt-2 text-[8px] text-xavier-blue font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity">
+                View Reports
+              </div>
+            </motion.button>
+          ))}
+          {saleCategories.length === 0 && (
+             <div className="col-span-full bg-white/5 border border-white/10 rounded-[2rem] p-20 text-center text-xavier-blue/40 italic">
+               No recap data found. Start by adding a new entry.
+             </div>
+          )}
+        </div>
+      ) : (
+        // TABLE VIEW
+        <div className="bg-white/5 border border-white/10 rounded-[2rem] overflow-x-auto shadow-2xl">
+          {(() => {
+            const currentSales = groupedSales[selectedEvent];
+            const grandTotalQty = currentSales.reduce((acc, sale) => acc + sale.items.reduce((iAcc, item) => iAcc + item.quantity, 0), 0);
+            const grandTotalPrice = currentSales.reduce((acc, sale) => acc + sale.items.reduce((iAcc, item) => iAcc + (item.price * item.quantity), 0), 0);
+            const grandTotalFee = currentSales.reduce((acc, sale) => acc + (Number(sale.fee) || 0), 0);
+            const grandTotalFinalPrice = grandTotalPrice + grandTotalFee;
 
-              return sale.items.map((item, itemIdx) => (
-                <tr key={`${sale.id}-${itemIdx}`} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                  {itemIdx === 0 && (
-                    <>
-                      <td className="p-3 border border-white/5 text-center text-star-white font-bold" rowSpan={sale.items.length}>{saleIdx + 1}</td>
-                      <td className="p-3 border border-white/5 text-star-white font-medium italic" rowSpan={sale.items.length}>{sale.customerName}</td>
-                      <td className="p-3 border border-white/5 text-center text-xavier-blue" rowSpan={sale.items.length}>{sale.booth}</td>
-                    </>
-                  )}
-                  <td className="p-3 border border-white/5 text-star-white/90">{item.name}</td>
-                  <td className="p-3 border border-white/5 text-center text-xavier-blue">{item.quantity}</td>
-                  <td className="p-3 border border-white/5 text-right text-star-white/70">{formatCurrency(item.price)}</td>
-                  
-                  {itemIdx === 0 && (
-                    <>
-                      <td className="p-3 border border-white/5 text-center text-star-white font-black" rowSpan={sale.items.length}>{totalQty}</td>
-                      <td className="p-3 border border-white/5 text-right text-star-white font-bold" rowSpan={sale.items.length}>{formatCurrency(totalPrice)}</td>
-                      <td className="p-3 border border-white/5 text-center bg-red-500/10 text-red-400 font-bold" rowSpan={sale.items.length}>{formatCurrency(sale.fee)}</td>
-                      <td className="p-3 border border-white/5 text-right bg-white/5 text-aether-gold font-black text-sm" rowSpan={sale.items.length}>{formatCurrency(finalPrice)}</td>
-                      <td className="p-3 border border-white/5 text-center text-xavier-blue font-bold" rowSpan={sale.items.length}>
-                        {sale.noInvoice || '❌'}
-                      </td>
-                      <td className="p-3 border border-white/5 text-center" rowSpan={sale.items.length}>
-                        <div className="flex items-center justify-center gap-2">
-                           <button 
-                            onClick={() => {
-                              setEditingId(sale.id);
-                              setCustomerName(sale.customerName);
-                              setBooth(sale.booth);
-                              setFee(sale.fee);
-                              setNoInvoice(sale.noInvoice);
-                              setItems(sale.items);
-                              setShowAdd(true);
-                            }}
-                            className="p-2 text-xavier-blue/40 hover:text-aether-gold transition-colors"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => deleteSale(sale.id)}
-                            className="p-2 text-xavier-blue/40 hover:text-red-400 transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ));
-            })}
-            {sales.length === 0 && (
-              <tr>
-                <td colSpan={12} className="p-20 text-center text-xavier-blue/40 italic">No recap data found. Start by adding a new entry.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            return (
+              <table className="w-full text-xs text-left border-collapse min-w-[1000px]">
+                <thead>
+                  <tr className="bg-celestial-depth/80 text-xavier-blue uppercase tracking-tighter font-black">
+                    <th className="p-4 border border-white/5 text-center w-12">NO</th>
+                    <th className="p-4 border border-white/5">X</th>
+                    <th className="p-4 border border-white/5 text-center">BOOTH</th>
+                    <th className="p-4 border border-white/5">ITEM NAME</th>
+                    <th className="p-4 border border-white/5 text-center">QTY</th>
+                    <th className="p-4 border border-white/5 text-right">ITEM PRICE</th>
+                    <th className="p-4 border border-white/5 text-center">TOTAL QTY</th>
+                    <th className="p-4 border border-white/5 text-right">TOTAL PRICE</th>
+                    <th className="p-4 border border-white/5 text-center bg-red-500/20 text-red-300">FEE</th>
+                    <th className="p-4 border border-white/5 text-right bg-white/5">FINAL PRICE</th>
+                    <th className="p-4 border border-white/5 text-center">NO INVOICE</th>
+                    <th className="p-4 border border-white/5 text-center">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentSales.map((sale, saleIdx) => {
+                    const totalQty = sale.items.reduce((acc, curr) => acc + curr.quantity, 0);
+                    const totalPrice = sale.items.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+                    const finalPrice = totalPrice + (Number(sale.fee) || 0);
+      
+                    return sale.items.map((item, itemIdx) => (
+                      <tr key={`${sale.id}-${itemIdx}`} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                        {itemIdx === 0 && (
+                          <>
+                            <td className="p-3 border border-white/5 text-center text-star-white font-bold" rowSpan={sale.items.length}>{saleIdx + 1}</td>
+                            <td className="p-3 border border-white/5 text-star-white font-medium italic" rowSpan={sale.items.length}>{sale.customerName}</td>
+                            <td className="p-3 border border-white/5 text-center text-xavier-blue" rowSpan={sale.items.length}>{sale.booth}</td>
+                          </>
+                        )}
+                        <td className="p-3 border border-white/5 text-star-white/90">{item.name}</td>
+                        <td className="p-3 border border-white/5 text-center text-xavier-blue">{item.quantity}</td>
+                        <td className="p-3 border border-white/5 text-right text-star-white/70">{formatCurrency(item.price)}</td>
+                        
+                        {itemIdx === 0 && (
+                          <>
+                            <td className="p-3 border border-white/5 text-center text-star-white font-black" rowSpan={sale.items.length}>{totalQty}</td>
+                            <td className="p-3 border border-white/5 text-right text-star-white font-bold" rowSpan={sale.items.length}>{formatCurrency(totalPrice)}</td>
+                            <td className="p-3 border border-white/5 text-center bg-red-500/10 text-red-400 font-bold" rowSpan={sale.items.length}>{formatCurrency(sale.fee)}</td>
+                            <td className="p-3 border border-white/5 text-right bg-white/5 text-aether-gold font-black text-sm" rowSpan={sale.items.length}>{formatCurrency(finalPrice)}</td>
+                            <td className="p-3 border border-white/5 text-center text-xavier-blue font-bold" rowSpan={sale.items.length}>
+                              {sale.noInvoice || '❌'}
+                            </td>
+                            <td className="p-3 border border-white/5 text-center" rowSpan={sale.items.length}>
+                              <div className="flex items-center justify-center gap-2">
+                                <button 
+                                  onClick={() => {
+                                    setEditingId(sale.id);
+                                    setCustomerName(sale.customerName);
+                                    setBooth(sale.booth);
+                                    setCategory(sale.category || '');
+                                    setFee(sale.fee);
+                                    setNoInvoice(sale.noInvoice);
+                                    setItems(sale.items);
+                                    setShowAdd(true);
+                                  }}
+                                  className="p-2 text-xavier-blue/40 hover:text-aether-gold transition-colors"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={() => deleteSale(sale.id)}
+                                  className="p-2 text-xavier-blue/40 hover:text-red-400 transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ));
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-celestial-depth/40 font-black border-t-2 border-white/10 uppercase italic">
+                    <td colSpan={6} className="p-6 border border-white/5 text-right text-xavier-blue tracking-[0.2em]">Grand Total</td>
+                    <td className="p-6 border border-white/5 text-center text-star-white">{grandTotalQty}</td>
+                    <td className="p-6 border border-white/5 text-right text-star-white">{formatCurrency(grandTotalPrice)}</td>
+                    <td className="p-6 border border-white/5 text-center text-red-400 bg-red-500/10">{formatCurrency(grandTotalFee)}</td>
+                    <td className="p-6 border border-white/5 text-right text-aether-gold bg-aether-gold/10 text-base">{formatCurrency(grandTotalFinalPrice)}</td>
+                    <td colSpan={2} className="p-6 border border-white/5"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            );
+          })()}
+        </div>
+      )}
+    {sales.length === 0 && (
+          <div className="bg-white/5 border border-white/10 rounded-[2rem] p-20 text-center text-xavier-blue/40 italic">
+            No recap data found. Start by adding a new entry.
+          </div>
+        )}
 
       {/* Add/Edit Modal */}
       <AnimatePresence>
@@ -467,6 +553,16 @@ export default function SalesRecap() {
                           required
                         />
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                      <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Category (Event / Folder)</label>
+                      <input 
+                        value={category}
+                        onChange={e => setCategory(e.target.value)}
+                        placeholder="e.g. Comifuro 18, Daily, Special Event"
+                        className="w-full px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-star-white focus:outline-none focus:border-aether-gold/50"
+                      />
                   </div>
 
                   <div className="space-y-4">
@@ -551,62 +647,6 @@ export default function SalesRecap() {
                   </button>
                 </form>
              </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-      {/* Event Name Modal */}
-      <AnimatePresence>
-        {showEventModal && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 sm:p-0">
-             <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setShowEventModal(false)}
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              />
-              <motion.div 
-                initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                className="relative w-full max-w-md bg-[#0F172A] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-aether-gold/5 blur-[80px] -mr-16 -mt-16" />
-                <div className="relative space-y-6">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-2xl font-bold text-star-white">Event Name</h3>
-                    <button onClick={() => setShowEventModal(false)} className="p-2 text-xavier-blue/40 hover:text-star-white">
-                      <X className="w-6 h-6" />
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Specify Event (Optional)</label>
-                      <input 
-                        type="text"
-                        value={eventName}
-                        onChange={(e) => setEventName(e.target.value)}
-                        placeholder="e.g. Comifuro 18, Popcon, etc."
-                        className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-star-white focus:outline-none focus:border-aether-gold/50"
-                        autoFocus
-                      />
-                    </div>
-                  </div>
-
-                  <button 
-                    onClick={() => {
-                      exportToPDF(eventName);
-                      setShowEventModal(false);
-                      setEventName('');
-                    }}
-                    className="w-full py-4 bg-aether-gold text-deep-void font-bold rounded-2xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
-                  >
-                    <Sparkle className="w-5 h-5" />
-                    Generate PDF
-                  </button>
-                </div>
-              </motion.div>
           </div>
         )}
       </AnimatePresence>
