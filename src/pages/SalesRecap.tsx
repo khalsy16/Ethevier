@@ -82,6 +82,10 @@ export default function SalesRecap() {
   const [eventName, setEventName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [confirmDeleteSelected, setConfirmDeleteSelected] = useState(false);
 
   // Form State
   const [customerName, setCustomerName] = useState('');
@@ -162,10 +166,34 @@ export default function SalesRecap() {
     setFee(parseInt(rawValue) || 0);
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const deleteSelected = async () => {
+    if (!user || selectedIds.length === 0) return;
+    
+    setConfirmDeleteSelected(false);
+    setLoading(true);
+    try {
+      const path = `users/${user.uid}/salesRecap`;
+      const batch = selectedIds.map(id => deleteDoc(doc(db, path, id)));
+      await Promise.all(batch);
+      setSelectedIds([]);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `users/${user.uid}/salesRecap`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
+    setSaving(true);
     const path = `users/${user.uid}/salesRecap`;
     const saleData: any = {
       customerName,
@@ -188,6 +216,8 @@ export default function SalesRecap() {
       resetForm();
     } catch (error) {
       handleFirestoreError(error, editingId ? OperationType.UPDATE : OperationType.CREATE, path);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -202,14 +232,20 @@ export default function SalesRecap() {
     setEditingId(null);
   };
 
-  const deleteSale = async (id: string) => {
-    if (!user || !confirm('Remove this entry?')) return;
+  const deleteSaleAction = async () => {
+    if (!user || !confirmDelete) return;
     const path = `users/${user.uid}/salesRecap`;
+    const idToDelete = confirmDelete;
+    setConfirmDelete(null);
     try {
-      await deleteDoc(doc(db, path, id));
+      await deleteDoc(doc(db, path, idToDelete));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, path);
     }
+  };
+
+  const deleteSale = (id: string) => {
+    setConfirmDelete(id);
   };
 
   const exportToPDF = (eventTitle?: string) => {
@@ -356,6 +392,15 @@ export default function SalesRecap() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+          {selectedIds.length > 0 && (
+            <button 
+              onClick={() => setConfirmDeleteSelected(true)}
+              className="px-6 py-3 bg-red-500/10 text-red-400 border border-red-500/20 font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-red-500/20 transition-all text-sm sm:text-base"
+            >
+              <Trash2 className="w-5 h-5" />
+              <span>Delete {selectedIds.length}</span>
+            </button>
+          )}
           <button 
             onClick={() => setShowEventModal(true)}
             className="px-6 py-3 bg-white/5 text-xavier-blue border border-white/10 font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-white/10 transition-all"
@@ -420,7 +465,20 @@ export default function SalesRecap() {
               <table className="w-full text-xs text-left border-collapse min-w-[1000px]">
                 <thead>
                   <tr className="bg-celestial-depth/80 text-xavier-blue uppercase tracking-tighter font-black">
-                    <th className="p-4 border border-white/5 text-center w-12">NO</th>
+                    <th className="p-4 border border-white/5 text-center w-12">
+                      <div className="flex items-center justify-center">
+                         <div 
+                           onClick={() => {
+                             const allIds = currentSales.map(s => s.id);
+                             if (selectedIds.length === allIds.length) setSelectedIds([]);
+                             else setSelectedIds(allIds);
+                           }}
+                           className={`w-4 h-4 rounded border transition-all cursor-pointer ${selectedIds.length === currentSales.length ? 'bg-aether-gold border-aether-gold' : 'border-white/20 bg-white/5'}`}
+                         >
+                            {selectedIds.length === currentSales.length && <Check className="w-3 h-3 text-deep-void" />}
+                         </div>
+                      </div>
+                    </th>
                     <th className="p-4 border border-white/5">X</th>
                     <th className="p-4 border border-white/5 text-center">BOOTH</th>
                     <th className="p-4 border border-white/5">ITEM NAME</th>
@@ -441,10 +499,21 @@ export default function SalesRecap() {
                     const finalPrice = totalPrice + (Number(sale.fee) || 0);
       
                     return sale.items.map((item, itemIdx) => (
-                      <tr key={`${sale.id}-${itemIdx}`} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                      <tr 
+                        key={`${sale.id}-${itemIdx}`} 
+                        className={`border-b border-white/5 hover:bg-white/[0.02] transition-colors cursor-pointer ${selectedIds.includes(sale.id) ? 'bg-white/[0.04]' : ''}`}
+                        onClick={() => toggleSelect(sale.id)}
+                      >
                         {itemIdx === 0 && (
                           <>
-                            <td className="p-3 border border-white/5 text-center text-star-white font-bold" rowSpan={sale.items.length}>{saleIdx + 1}</td>
+                            <td className="p-3 border border-white/5 text-center" rowSpan={sale.items.length}>
+                               <div className="flex flex-col items-center gap-1">
+                                  <div className={`w-4 h-4 rounded border transition-all ${selectedIds.includes(sale.id) ? 'bg-aether-gold border-aether-gold' : 'border-white/20 bg-white/5'}`}>
+                                     {selectedIds.includes(sale.id) && <Check className="w-3 h-3 text-deep-void" />}
+                                  </div>
+                                  <span className="text-[10px] text-star-white font-bold">{saleIdx + 1}</span>
+                               </div>
+                            </td>
                             <td className="p-3 border border-white/5 text-star-white font-medium italic" rowSpan={sale.items.length}>{sale.customerName}</td>
                             <td className="p-3 border border-white/5 text-center text-xavier-blue" rowSpan={sale.items.length}>{sale.booth}</td>
                           </>
@@ -463,7 +532,7 @@ export default function SalesRecap() {
                               {sale.noInvoice || '❌'}
                             </td>
                             <td className="p-3 border border-white/5 text-center" rowSpan={sale.items.length}>
-                              <div className="flex items-center justify-center gap-2">
+                              <div className="flex items-center justify-center gap-2" onClick={e => e.stopPropagation()}>
                                 <button 
                                   onClick={() => {
                                     setEditingId(sale.id);
@@ -642,8 +711,15 @@ export default function SalesRecap() {
                     </div>
                   </div>
 
-                  <button className="w-full bg-aether-gold text-celestial-dark font-black py-4 rounded-2xl text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl">
-                    {editingId ? 'Update Entry' : 'Save Entry'}
+                  <button 
+                    disabled={saving}
+                    className="w-full bg-aether-gold text-celestial-dark font-black py-4 rounded-2xl text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {saving ? (
+                      <div className="w-5 h-5 border-2 border-celestial-dark/30 border-t-celestial-dark rounded-full animate-spin" />
+                    ) : (
+                      editingId ? 'Update Entry' : 'Save Entry'
+                    )}
                   </button>
                 </form>
              </motion.div>
@@ -706,6 +782,50 @@ export default function SalesRecap() {
           </div>
         )}
       </AnimatePresence>
+       {/* Custom Confirmation Modals */}
+       <AnimatePresence>
+         {(confirmDelete || confirmDeleteSelected) && (
+           <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+             <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               onClick={() => { setConfirmDelete(null); setConfirmDeleteSelected(false); }}
+               className="absolute inset-0 bg-celestial-dark/80 backdrop-blur-md"
+             />
+             <motion.div 
+               initial={{ opacity: 0, scale: 0.9, y: 20 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               exit={{ opacity: 0, scale: 0.9, y: 20 }}
+               className="relative w-full max-w-sm bg-celestial-depth border border-white/10 rounded-[2.5rem] p-8 shadow-2xl text-center"
+             >
+                <div className="w-16 h-16 bg-red-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <Trash2 className="w-8 h-8 text-red-400" />
+                </div>
+                <h3 className="text-xl font-bold text-star-white mb-2">Are you sure?</h3>
+                <p className="text-xavier-blue/60 mb-8 text-sm">
+                  {confirmDeleteSelected 
+                    ? `Remove ${selectedIds.length} sales entries from your records forever? This action cannot be undone.` 
+                    : "Remove this sales entry from your records? This action cannot be undone."}
+                </p>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => { setConfirmDelete(null); setConfirmDeleteSelected(false); }}
+                    className="flex-1 py-4 bg-white/5 text-xavier-blue font-bold rounded-2xl hover:bg-white/10 transition-all text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={confirmDeleteSelected ? deleteSelected : deleteSaleAction}
+                    className="flex-1 py-4 bg-red-500 text-white font-bold rounded-2xl hover:bg-red-600 transition-all shadow-lg shadow-red-500/20 text-sm"
+                  >
+                    Delete Now
+                  </button>
+                </div>
+             </motion.div>
+           </div>
+         )}
+       </AnimatePresence>
     </div>
   );
 }

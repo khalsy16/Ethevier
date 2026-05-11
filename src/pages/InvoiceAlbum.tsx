@@ -53,6 +53,29 @@ export default function InvoiceAlbum() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const deleteSelected = async () => {
+    if (!user || selectedIds.length === 0) return;
+    if (!window.confirm(`Wipe ${selectedIds.length} memories from the archive?`)) return;
+
+    setLoading(true);
+    try {
+      const batch = selectedIds.map(id => deleteDoc(doc(db, 'users', user.uid, 'invoices', id)));
+      await Promise.all(batch);
+      setSelectedIds([]);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -174,6 +197,15 @@ export default function InvoiceAlbum() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+          {selectedIds.length > 0 && (
+            <button 
+              onClick={deleteSelected}
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-red-500/10 border border-red-500/20 text-red-400 font-bold rounded-2xl hover:bg-red-500/20 transition-all"
+            >
+              <Trash2 className="w-5 h-5" />
+              <span>Discard {selectedIds.length}</span>
+            </button>
+          )}
           <div className="relative group flex-1 md:w-64">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-xavier-blue/40 group-focus-within:text-aether-gold transition-colors" />
             <input 
@@ -240,16 +272,22 @@ export default function InvoiceAlbum() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ delay: idx * 0.05 }}
-                className="group relative bg-celestial-depth border border-white/10 rounded-[2rem] overflow-hidden shadow-xl hover:shadow-aether-gold/5 transition-all"
+                className={`group relative bg-celestial-depth border transition-all rounded-[2rem] overflow-hidden shadow-xl hover:shadow-aether-gold/5 cursor-pointer ${
+                  selectedIds.includes(invoice.id) ? 'ring-2 ring-aether-gold border-aether-gold/50' : 'border-white/10'
+                }`}
+                onClick={() => toggleSelect(invoice.id)}
               >
                 {/* Image Preview */}
                 <div className="relative aspect-[4/3] overflow-hidden bg-black/20">
+                  <div className={`absolute top-4 left-4 z-10 w-6 h-6 rounded-lg border-2 flex items-center justify-center backdrop-blur-md transition-all ${selectedIds.includes(invoice.id) ? 'bg-aether-gold border-aether-gold text-deep-void' : 'border-white/20 bg-white/5'}`}>
+                    {selectedIds.includes(invoice.id) && <Check className="w-4 h-4" />}
+                  </div>
                   <img 
                     src={invoice.imageUrl} 
                     alt={invoice.title}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-celestial-dark/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                  <div className="absolute inset-0 bg-gradient-to-t from-celestial-dark/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3" onClick={e => e.stopPropagation()}>
                      <button 
                        onClick={() => setSelectedInvoice(invoice)}
                        className="p-3 bg-white/10 backdrop-blur-md rounded-full text-white hover:bg-white/20 transition-all"
@@ -266,7 +304,7 @@ export default function InvoiceAlbum() {
                 </div>
   
                 {/* Title Area */}
-                <div className="p-5">
+                <div className="p-5" onClick={e => e.stopPropagation()}>
                   {editingId === invoice.id ? (
                     <div className="flex gap-2">
                       <input 

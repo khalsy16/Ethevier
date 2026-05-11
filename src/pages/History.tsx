@@ -18,8 +18,53 @@ export default function History() {
   const [editSource, setEditSource] = useState('');
   const [editFrequency, setEditFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deletingIds, setDeletingIds] = useState<string[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string, type: 'income' | 'expense' } | null>(null);
+  const [confirmDeleteSelected, setConfirmDeleteSelected] = useState(false);
 
-  const handleEdit = (transaction: any) => {
+  const handleFirestoreError = (error: unknown, operationType: string, path: string | null) => {
+    const errInfo = {
+      error: error instanceof Error ? error.message : String(error),
+      authInfo: {
+        userId: user?.uid,
+        email: user?.email,
+      },
+      operationType,
+      path
+    };
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+  };
+
+  const toggleSelect = (id: string, type: 'income' | 'expense') => {
+    const compositeId = `${type}:${id}`;
+    setSelectedIds(prev => 
+      prev.includes(compositeId) ? prev.filter(i => i !== compositeId) : [...prev, compositeId]
+    );
+  };
+
+  const deleteSelected = async () => {
+    if (!user || selectedIds.length === 0) return;
+    
+    setConfirmDeleteSelected(false);
+    setLoading(true);
+    try {
+      const batch = selectedIds.map(compositeId => {
+        const [type, id] = compositeId.split(':');
+        const collectionName = type === 'income' ? 'incomes' : 'expenses';
+        return deleteDoc(doc(db, `users/${user.uid}/${collectionName}`, id));
+      });
+      await Promise.all(batch);
+      setSelectedIds([]);
+    } catch (error) {
+      handleFirestoreError(error, 'deleteSelected', `users/${user.uid}/transactions`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (e: React.MouseEvent, transaction: any) => {
+    e.stopPropagation();
     setEditingTransaction(transaction);
     setEditAmount(transaction.amount.toString());
     setEditSource(transaction.source || '');
@@ -112,14 +157,25 @@ export default function History() {
     formatIDR(t.amount).includes(searchTerm)
   );
 
-  const handleDelete = async (id: string, type: 'income' | 'expense') => {
-    if (!user || !confirm(`Remove this ${type} from your star constellation?`)) return;
+  const handleDeleteAction = async () => {
+    if (!user || !confirmDelete) return;
+    
+    const { id, type } = confirmDelete;
+    setConfirmDelete(null);
+    setDeletingIds(prev => [...prev, id]);
     try {
       const collectionName = type === 'income' ? 'incomes' : 'expenses';
-      await deleteDoc(doc(db, 'users', user.uid, collectionName, id));
+      await deleteDoc(doc(db, `users/${user.uid}/${collectionName}`, id));
     } catch (error) {
-      console.error(error);
+      handleFirestoreError(error, 'delete', `users/${user.uid}/${type === 'income' ? 'incomes' : 'expenses'}`);
+    } finally {
+      setDeletingIds(prev => prev.filter(di => di !== id));
     }
+  };
+
+  const handleDelete = (e: React.MouseEvent, id: string, type: 'income' | 'expense') => {
+    e.stopPropagation();
+    setConfirmDelete({ id, type });
   };
 
   const exportToPDF = () => {
@@ -208,6 +264,15 @@ export default function History() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+          {selectedIds.length > 0 && (
+            <button 
+              onClick={() => setConfirmDeleteSelected(true)}
+              className="px-6 py-3 bg-red-500/10 text-red-400 border border-red-500/20 font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-red-500/20 transition-all text-sm sm:text-base"
+            >
+              <Trash2 className="w-5 h-5" />
+              <span>Delete {selectedIds.length}</span>
+            </button>
+          )}
           <button 
             onClick={exportToPDF}
             className="px-6 py-3 bg-white/5 text-xavier-blue border border-white/10 font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-white/10 transition-all"
@@ -237,18 +302,22 @@ export default function History() {
             </div>
          </div>
 
-         {/* Mobile View: Cards */}
-         <div className="md:hidden divide-y divide-white/5">
+          {/* Mobile View: Cards */}
+          <div className="md:hidden divide-y divide-white/5">
             {filteredTransactions.map((transaction, idx) => (
               <motion.div 
                 key={transaction.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.03 }}
-                className="p-6 space-y-4"
+                className={`p-6 space-y-4 cursor-pointer transition-all ${selectedIds.includes(`${transaction.type}:${transaction.id}`) ? 'bg-white/[0.04]' : ''}`}
+                onClick={() => toggleSelect(transaction.id, transaction.type)}
               >
                 <div className="flex justify-between items-start">
                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center ${selectedIds.includes(`${transaction.type}:${transaction.id}`) ? 'bg-aether-gold border-aether-gold' : 'border-white/10 bg-white/5'}`}>
+                         {selectedIds.includes(`${transaction.type}:${transaction.id}`) && <X className="w-3 h-3 text-deep-void" />}
+                      </div>
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${transaction.type === 'income' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
                          <ArrowUpRight className={`w-4 h-4 ${transaction.type === 'income' ? 'text-green-400' : 'text-red-400 rotate-90'}`} />
                       </div>
@@ -261,16 +330,21 @@ export default function History() {
                    </div>
                    <div className="flex gap-2">
                      <button 
-                       onClick={() => handleEdit(transaction)}
+                       onClick={(e) => handleEdit(e, transaction)}
                        className="p-2 text-xavier-blue/20 hover:text-aether-gold transition-colors"
                      >
                        <Edit2 className="w-4 h-4" />
                      </button>
                      <button 
-                       onClick={() => handleDelete(transaction.id, transaction.type)}
-                       className="p-2 text-xavier-blue/20 hover:text-red-400"
+                       onClick={(e) => handleDelete(e, transaction.id, transaction.type)}
+                       disabled={deletingIds.includes(transaction.id)}
+                       className={`p-2 text-xavier-blue/20 hover:text-red-400 transition-all ${deletingIds.includes(transaction.id) ? 'opacity-50' : ''}`}
                      >
-                       <Trash2 className="w-4 h-4" />
+                       {deletingIds.includes(transaction.id) ? (
+                         <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                       ) : (
+                         <Trash2 className="w-4 h-4" />
+                       )}
                      </button>
                    </div>
                 </div>
@@ -291,6 +365,17 @@ export default function History() {
             <table className="w-full text-left border-collapse">
                <thead>
                   <tr className="bg-white/5">
+                     <th className="px-8 py-4 w-12">
+                        <div 
+                          onClick={() => {
+                            if (selectedIds.length === filteredTransactions.length) setSelectedIds([]);
+                            else setSelectedIds(filteredTransactions.map(t => `${t.type}:${t.id}`));
+                          }}
+                          className={`w-5 h-5 rounded border-2 transition-all cursor-pointer flex items-center justify-center ${selectedIds.length === filteredTransactions.length && filteredTransactions.length > 0 ? 'bg-aether-gold border-aether-gold' : 'border-white/10 bg-white/5'}`}
+                        >
+                           {selectedIds.length === filteredTransactions.length && filteredTransactions.length > 0 && <X className="w-3 h-3 text-deep-void" />}
+                        </div>
+                     </th>
                      <th className="px-8 py-4 text-[10px] font-bold text-xavier-blue uppercase tracking-widest">Date & Time</th>
                      <th className="px-8 py-4 text-[10px] font-bold text-xavier-blue uppercase tracking-widest">Source / Description</th>
                      <th className="px-8 py-4 text-[10px] font-bold text-xavier-blue uppercase tracking-widest">Amount</th>
@@ -305,8 +390,14 @@ export default function History() {
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: idx * 0.03 }}
-                          className="border-b border-white/5 hover:bg-white/5 transition-colors group"
+                          className={`border-b border-white/5 hover:bg-white/5 transition-colors group cursor-pointer ${selectedIds.includes(`${transaction.type}:${transaction.id}`) ? 'bg-white/[0.04]' : ''}`}
+                          onClick={() => toggleSelect(transaction.id, transaction.type)}
                         >
+                           <td className="px-8 py-6">
+                              <div className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center ${selectedIds.includes(`${transaction.type}:${transaction.id}`) ? 'bg-aether-gold border-aether-gold' : 'border-white/10 bg-white/5'}`}>
+                                 {selectedIds.includes(`${transaction.type}:${transaction.id}`) && <X className="w-3 h-3 text-deep-void" />}
+                              </div>
+                           </td>
                            <td className="px-8 py-6">
                               <div className="space-y-0.5">
                                  <p className="text-sm font-medium text-star-white">
@@ -334,18 +425,23 @@ export default function History() {
                               </span>
                            </td>
                            <td className="px-8 py-6 text-right">
-                              <div className="flex gap-2 justify-end">
+                              <div className="flex gap-2 justify-end" onClick={e => e.stopPropagation()}>
                                 <button 
-                                  onClick={() => handleEdit(transaction)}
+                                  onClick={(e) => handleEdit(e, transaction)}
                                   className="p-2 text-xavier-blue/20 hover:text-aether-gold hover:bg-aether-gold/10 rounded-xl transition-all"
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button 
-                                  onClick={() => handleDelete(transaction.id, transaction.type)}
-                                  className="p-2 text-xavier-blue/20 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
+                                  onClick={(e) => handleDelete(e, transaction.id, transaction.type)}
+                                  disabled={deletingIds.includes(transaction.id)}
+                                  className={`p-2 text-xavier-blue/20 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all ${deletingIds.includes(transaction.id) ? 'opacity-50' : ''}`}
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  {deletingIds.includes(transaction.id) ? (
+                                    <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
                                 </button>
                               </div>
                            </td>
@@ -440,6 +536,50 @@ export default function History() {
                     {isUpdating ? 'Updating...' : 'Save Changes'}
                   </button>
                 </form>
+             </motion.div>
+           </div>
+         )}
+       </AnimatePresence>
+       {/* Custom Confirmation Modals */}
+       <AnimatePresence>
+         {(confirmDelete || confirmDeleteSelected) && (
+           <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
+             <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               onClick={() => { setConfirmDelete(null); setConfirmDeleteSelected(false); }}
+               className="absolute inset-0 bg-celestial-dark/80 backdrop-blur-md"
+             />
+             <motion.div 
+               initial={{ opacity: 0, scale: 0.9, y: 20 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               exit={{ opacity: 0, scale: 0.9, y: 20 }}
+               className="relative w-full max-w-sm bg-celestial-depth border border-white/10 rounded-[2.5rem] p-8 shadow-2xl text-center"
+             >
+                <div className="w-16 h-16 bg-red-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <Trash2 className="w-8 h-8 text-red-400" />
+                </div>
+                <h3 className="text-xl font-bold text-star-white mb-2">Are you sure?</h3>
+                <p className="text-xavier-blue/60 mb-8">
+                  {confirmDeleteSelected 
+                    ? `Remove ${selectedIds.length} transactions from your history forever? This action cannot be undone.` 
+                    : "Remove this transaction from your star constellation? This action cannot be undone."}
+                </p>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => { setConfirmDelete(null); setConfirmDeleteSelected(false); }}
+                    className="flex-1 py-4 bg-white/5 text-xavier-blue font-bold rounded-2xl hover:bg-white/10 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={confirmDeleteSelected ? deleteSelected : handleDeleteAction}
+                    className="flex-1 py-4 bg-red-500 text-white font-bold rounded-2xl hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
+                  >
+                    Delete Now
+                  </button>
+                </div>
              </motion.div>
            </div>
          )}

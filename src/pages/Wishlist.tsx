@@ -37,7 +37,34 @@ export default function Wishlist() {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteSelected, setConfirmDeleteSelected] = useState(false);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const deleteSelected = async () => {
+    if (!user || selectedIds.length === 0) return;
+    
+    setConfirmDeleteSelected(false);
+    setLoading(true);
+    try {
+      const batch = selectedIds.map(id => 
+        deleteDoc(doc(db, `users/${user.uid}/wishlist`, id))
+      );
+      await Promise.all(batch);
+      setSelectedIds([]);
+    } catch (error) {
+      handleFirestoreError(error, 'delete', `users/${user.uid}/wishlist`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleFirestoreError = (error: unknown, operationType: string, path: string | null) => {
     const errInfo = {
@@ -112,6 +139,7 @@ export default function Wishlist() {
     e.preventDefault();
     if (!user || !name || !price) return;
 
+    setSaving(true);
     try {
       const wishlistRef = collection(db, 'users', user.uid, 'wishlist');
       if (editingItem) {
@@ -140,6 +168,8 @@ export default function Wishlist() {
       resetForm();
     } catch (error) {
       handleFirestoreError(error, editingItem ? 'update' : 'create', `users/${user.uid}/wishlist`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -252,16 +282,27 @@ export default function Wishlist() {
              {selectedCategory ? `${groupedItems[selectedCategory].length} Dreams in this cluster` : 'Architect your future desires'}
            </p>
         </div>
-        <button 
-          onClick={() => setShowAdd(true)}
-          className="group relative px-8 py-4 bg-aether-gold text-celestial-dark font-black rounded-2xl overflow-hidden transition-all hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,215,0,0.3)]"
-        >
+        <div className="flex gap-4 w-full sm:w-auto">
+          {selectedIds.length > 0 && (
+            <button 
+              onClick={() => setConfirmDeleteSelected(true)}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-red-500/10 border border-red-500/20 text-red-400 px-6 py-4 sm:py-3 rounded-2xl font-bold hover:bg-red-500/20 transition-all"
+            >
+              <Trash2 className="w-5 h-5" />
+              <span>Delete {selectedIds.length}</span>
+            </button>
+          )}
+          <button 
+            onClick={() => setShowAdd(true)}
+            className="flex-1 sm:flex-none group relative px-8 py-4 bg-aether-gold text-celestial-dark font-black rounded-2xl overflow-hidden transition-all hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,215,0,0.3)]"
+          >
           <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
           <span className="relative flex items-center gap-2 uppercase tracking-tighter">
             <Plus className="w-5 h-5" /> New Dream
           </span>
         </button>
       </div>
+    </div>
 
       {!selectedCategory ? (
         // FOLDER VIEW
@@ -338,17 +379,25 @@ export default function Wishlist() {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ delay: idx * 0.05 }}
-                    className={`relative p-8 rounded-[2rem] border transition-all overflow-hidden ${
+                    className={`relative p-8 rounded-[2rem] border transition-all overflow-hidden cursor-pointer ${
+                      selectedIds.includes(item.id) ? 'ring-2 ring-aether-gold border-aether-gold/50' : ''
+                    } ${
                       item.status === 'attained' 
                         ? 'bg-green-500/10 border-green-500/20 grayscale-[0.5]' 
                         : 'bg-celestial-depth/80 border-white/10 hover:border-aether-gold/30'
                     }`}
+                    onClick={() => toggleSelect(item.id)}
                   >
                     <div className="flex justify-between items-start mb-6">
-                      <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-aether-gold">
-                         <Heart className={item.status === 'attained' ? 'fill-green-400 text-green-400' : ''} />
+                      <div className="flex items-center gap-4">
+                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${selectedIds.includes(item.id) ? 'bg-aether-gold border-aether-gold' : 'border-white/10 bg-white/5'}`}>
+                           {selectedIds.includes(item.id) && <Check className="w-4 h-4 text-deep-void" />}
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-aether-gold">
+                           <Heart className={item.status === 'attained' ? 'fill-green-400 text-green-400' : ''} />
+                        </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2" onClick={e => e.stopPropagation()}>
                         <button onClick={() => openEdit(item)} className="p-3 text-xavier-blue/40 hover:text-aether-gold hover:bg-white/5 rounded-xl transition-all">
                           <Pencil className="w-5 h-5" />
                         </button>
@@ -525,14 +574,57 @@ export default function Wishlist() {
                       />
                    </div>
                    
-                   <button className="w-full bg-aether-gold text-celestial-dark font-black py-5 rounded-2xl text-lg hover:scale-[1.02] active:scale-95 transition-all">
-                      {editingItem ? 'Update Wish' : 'Send Wish to Stars'}
+                   <button 
+                     type="submit"
+                     disabled={saving}
+                     className="w-full bg-aether-gold text-celestial-dark font-black py-5 rounded-2xl text-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                   >
+                      {saving ? (
+                        <div className="w-5 h-5 border-2 border-celestial-dark/30 border-t-celestial-dark rounded-full animate-spin" />
+                      ) : (
+                        editingItem ? 'Update Wish' : 'Send Wish to Stars'
+                      )}
                    </button>
                 </form>
               </motion.div>
           </div>
         )}
       </AnimatePresence>
+       {/* Custom Confirmation Modal */}
+       <AnimatePresence>
+         {confirmDeleteSelected && (
+           <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-celestial-dark/80 backdrop-blur-md">
+             <motion.div 
+               initial={{ opacity: 0, scale: 0.9, y: 20 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               exit={{ opacity: 0, scale: 0.9, y: 20 }}
+               className="relative w-full max-w-sm bg-celestial-depth border border-white/10 rounded-[2.5rem] p-8 shadow-2xl text-center"
+             >
+                <div className="w-16 h-16 bg-red-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <Trash2 className="w-8 h-8 text-red-400" />
+                </div>
+                <h3 className="text-xl font-bold text-star-white mb-2">Are you sure?</h3>
+                <p className="text-xavier-blue/60 mb-8 text-sm">
+                  Remove {selectedIds.length} dreams from your constellation? This action cannot be undone.
+                </p>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setConfirmDeleteSelected(false)}
+                    className="flex-1 py-4 bg-white/5 text-xavier-blue font-bold rounded-2xl hover:bg-white/10 transition-all text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={deleteSelected}
+                    className="flex-1 py-4 bg-red-500 text-white font-bold rounded-2xl hover:bg-red-600 transition-all shadow-lg shadow-red-500/20 text-sm"
+                  >
+                    Delete Now
+                  </button>
+                </div>
+             </motion.div>
+           </div>
+         )}
+       </AnimatePresence>
     </div>
   );
 }
