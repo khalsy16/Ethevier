@@ -169,7 +169,7 @@ export default function Dashboard() {
       return [
         idx + 1,
         format(date, 'dd MMM yyyy, HH:mm'),
-        activity.source || 'General',
+        `${activity.source || 'General'} (${activity.frequency || 'daily'})`,
         activity.type === 'income' ? 'INCOME' : 'EXPENSE',
         formatIDR(activity.amount).replace('Rp', '').trim()
       ];

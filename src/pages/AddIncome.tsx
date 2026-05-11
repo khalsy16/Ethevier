@@ -11,6 +11,7 @@ export default function AddIncome() {
   const [displayAmount, setDisplayAmount] = useState('');
   const [source, setSource] = useState('');
   const [type, setType] = useState<'income' | 'expense'>('income');
+  const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -39,6 +40,7 @@ export default function AddIncome() {
       await addDoc(collection(db, 'users', user.uid, collectionName), {
         amount: rawAmount,
         source: source || (type === 'income' ? 'Daily Savings' : 'General Expense'),
+        frequency,
         userId: user.uid,
         date: serverTimestamp(),
         createdAt: serverTimestamp()
@@ -46,6 +48,7 @@ export default function AddIncome() {
       setAmount('');
       setDisplayAmount('');
       setSource('');
+      setFrequency('daily');
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
@@ -109,6 +112,31 @@ export default function AddIncome() {
                 placeholder={type === 'income' ? "Where did this income come from?" : "What was this expense for?"}
                 className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-sm sm:text-base text-star-white focus:outline-none focus:border-aether-gold/50 transition-all"
               />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] sm:text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Frequency / Period</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { id: 'daily', label: 'Harian' },
+                  { id: 'weekly', label: 'Mingguan' },
+                  { id: 'monthly', label: 'Bulanan' },
+                  { id: 'yearly', label: 'Tahunan' }
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setFrequency(f.id as any)}
+                    className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-tighter transition-all border-2 ${
+                      frequency === f.id 
+                        ? 'bg-xavier-blue/20 border-xavier-blue text-star-white scale-95 shadow-inner' 
+                        : 'bg-white/5 border-white/5 text-xavier-blue/40 hover:text-xavier-blue/70'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <button 

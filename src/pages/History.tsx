@@ -16,12 +16,14 @@ export default function History() {
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [editAmount, setEditAmount] = useState('');
   const [editSource, setEditSource] = useState('');
+  const [editFrequency, setEditFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleEdit = (transaction: any) => {
     setEditingTransaction(transaction);
     setEditAmount(transaction.amount.toString());
     setEditSource(transaction.source || '');
+    setEditFrequency(transaction.frequency || 'daily');
   };
 
   const formatInputNumber = (value: string | number) => {
@@ -45,6 +47,7 @@ export default function History() {
       await updateDoc(doc(db, 'users', user.uid, collectionName, editingTransaction.id), {
         amount: parseFloat(editAmount),
         source: editSource,
+        frequency: editFrequency,
         updatedAt: new Date()
       });
       setEditingTransaction(null);
@@ -128,7 +131,7 @@ export default function History() {
       return [
         idx + 1,
         format(date, 'dd MMM yyyy, HH:mm'),
-        t.source || 'General',
+        `${t.source || 'General'} (${t.frequency || 'daily'})`,
         t.type === 'income' ? 'INCOME' : 'EXPENSE',
         formatIDR(t.amount).replace('Rp', '').trim()
       ];
@@ -271,9 +274,14 @@ export default function History() {
                      </button>
                    </div>
                 </div>
-                <div className={`text-xl font-bold ${transaction.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
-                   {transaction.type === 'income' ? '+' : '-'}{formatIDR(transaction.amount)}
-                </div>
+                    <div className="flex gap-2">
+                       <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase border ${transaction.type === 'income' ? 'bg-green-500/5 border-green-500/20 text-green-400' : 'bg-red-500/5 border-red-500/20 text-red-400'}`}>
+                          {transaction.frequency || 'daily'}
+                       </span>
+                       <div className={`text-xl font-bold ${transaction.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
+                          {transaction.type === 'income' ? '+' : '-'}{formatIDR(transaction.amount)}
+                       </div>
+                    </div>
               </motion.div>
             ))}
          </div>
@@ -314,7 +322,10 @@ export default function History() {
                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${transaction.type === 'income' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
                                     <ArrowUpRight className={`w-4 h-4 ${transaction.type === 'income' ? 'text-green-400' : 'text-red-400 rotate-90'}`} />
                                  </div>
-                                 <span className="text-sm text-star-white font-medium">{transaction.source || 'No Note'}</span>
+                                 <div className="flex flex-col">
+                                    <span className="text-sm text-star-white font-medium">{transaction.source || 'No Note'}</span>
+                                    <span className="text-[9px] text-xavier-blue/40 uppercase font-black tracking-widest">{transaction.frequency || 'daily'}</span>
+                                 </div>
                               </div>
                            </td>
                            <td className="px-8 py-6">
@@ -399,6 +410,26 @@ export default function History() {
                       className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-star-white focus:outline-none focus:border-aether-gold/50"
                       required
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Frequency / Period</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {['daily', 'weekly', 'monthly', 'yearly'].map((f) => (
+                        <button
+                          key={f}
+                          type="button"
+                          onClick={() => setEditFrequency(f as any)}
+                          className={`py-2 rounded-xl text-[9px] font-black uppercase transition-all border-2 ${
+                            editFrequency === f 
+                              ? 'bg-xavier-blue/20 border-xavier-blue text-star-white' 
+                              : 'bg-white/5 border-white/5 text-xavier-blue/40'
+                          }`}
+                        >
+                          {f === 'daily' ? 'Harian' : f === 'weekly' ? 'Mgguan' : f === 'monthly' ? 'Bulan' : 'Tahun'}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <button 
