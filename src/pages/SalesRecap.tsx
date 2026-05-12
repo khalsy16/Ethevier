@@ -259,14 +259,19 @@ export default function SalesRecap() {
     const doc = new jsPDF('landscape');
     const tableData: any[][] = [];
     
-    // Sort sales by date ascending for the report
-    const sortedSales = [...sales].sort((a, b) => {
+    // Filter and Sort sales by date ascending for the report
+    const filteredSales = sales.filter(s => {
+      const cat = s.category || 'General';
+      return !eventTitle || cat === eventTitle;
+    });
+
+    const sortedSales = [...filteredSales].sort((a, b) => {
       const dateA = (a.createdAt as Timestamp)?.toMillis() || 0;
       const dateB = (b.createdAt as Timestamp)?.toMillis() || 0;
       return dateA - dateB;
     });
 
-    // Calculate Grand Totals accurately
+    // Calculate Grand Totals accurately based on filtered data
     const grandTotalQty = sortedSales.reduce((acc, sale) => acc + sale.items.reduce((iAcc, item) => iAcc + item.quantity, 0), 0);
     const grandSubtotal = sortedSales.reduce((acc, sale) => acc + sale.items.reduce((iAcc, item) => iAcc + (item.price * item.quantity), 0), 0);
     const grandTotalFees = sortedSales.reduce((acc, sale) => acc + (Number(sale.fee) || 0), 0);
@@ -465,7 +470,10 @@ export default function SalesRecap() {
             </button>
           )}
           <button 
-            onClick={() => setShowEventModal(true)}
+            onClick={() => {
+              if (selectedEvent) setEventName(selectedEvent);
+              setShowEventModal(true);
+            }}
             className="px-6 py-3 bg-white/5 text-xavier-blue border border-white/10 font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-white/10 transition-all"
           >
             <Download className="w-5 h-5" />
