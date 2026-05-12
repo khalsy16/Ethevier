@@ -267,6 +267,7 @@ export default function SalesRecap() {
     });
 
     // Calculate Grand Totals accurately
+    const totalTransactions = sortedSales.length;
     const grandTotalQty = sortedSales.reduce((acc, sale) => acc + sale.items.reduce((iAcc, item) => iAcc + item.quantity, 0), 0);
     const grandSubtotal = sortedSales.reduce((acc, sale) => acc + sale.items.reduce((iAcc, item) => iAcc + (item.price * item.quantity), 0), 0);
     const grandTotalFees = sortedSales.reduce((acc, sale) => acc + (Number(sale.fee) || 0), 0);
@@ -319,14 +320,6 @@ export default function SalesRecap() {
       startY: 45,
       head: [['ID', 'CUSTOMER', 'BOOTH', 'ITEM NAME', 'QTY', 'PRICE', 'T. QTY', 'SUBTOTAL', 'FEE', 'TOTAL', 'INV']],
       body: tableData,
-      foot: [[
-        { content: 'GRAND TOTAL', colSpan: 6, styles: { halign: 'right', fontStyle: 'bold', fillColor: [30, 41, 59], textColor: [255, 255, 255] } },
-        { content: grandTotalQty.toString(), styles: { halign: 'center', fontStyle: 'bold', fillColor: [30, 41, 59], textColor: [255, 255, 255] } },
-        { content: formatCurrency(grandSubtotal).replace('Rp', '').trim(), styles: { halign: 'right', fontStyle: 'bold', fillColor: [30, 41, 59], textColor: [255, 255, 255] } },
-        { content: formatCurrency(grandTotalFees).replace('Rp', '').trim(), styles: { halign: 'right', fontStyle: 'bold', fillColor: [220, 38, 38], textColor: [255, 255, 255] } },
-        { content: formatCurrency(grandNetRevenue).replace('Rp', '').trim(), styles: { halign: 'right', fontStyle: 'bold', fillColor: [255, 215, 0], textColor: [15, 23, 42] } },
-        ''
-      ]],
       theme: 'grid',
       headStyles: { 
         fillColor: [30, 41, 59], 
@@ -362,6 +355,50 @@ export default function SalesRecap() {
         doc.text(`Ethevier Financial Service - Page ${doc.getNumberOfPages()}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
       }
     });
+
+    // Add Final Summary Section at the very bottom of the last page
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    const pageHeight = doc.internal.pageSize.height;
+    const pageWidth = doc.internal.pageSize.width;
+    
+    // Position summary at the bottom of the page
+    const footerY = pageHeight - 50; 
+    
+    // Draw a neat summary line across the page
+    doc.setDrawColor(30, 41, 59, 0.2);
+    doc.line(14, footerY - 5, pageWidth - 14, footerY - 5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(30, 41, 59);
+    doc.text('GRAND RECAP SUMMARY', 14, footerY);
+
+    const leftColX = 14;
+    const rightColX = pageWidth - 14;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(100);
+    
+    doc.text(`Total Transactions: ${totalTransactions}`, leftColX, footerY + 8);
+    doc.text(`Total Items Sold: ${grandTotalQty}`, leftColX, footerY + 14);
+    
+    // Right side highlights
+    doc.setFontSize(9);
+    doc.text(`Subtotal:`, rightColX - 60, footerY + 8);
+    doc.text(formatCurrency(grandSubtotal), rightColX, footerY + 8, { align: 'right' });
+    
+    doc.text(`Fees:`, rightColX - 60, footerY + 14);
+    doc.text(formatCurrency(grandTotalFees), rightColX, footerY + 14, { align: 'right' });
+    
+    // Final Highlight
+    doc.setFillColor(255, 215, 0);
+    doc.rect(rightColX - 70, footerY + 18, 70, 10, 'F');
+    doc.setTextColor(15, 23, 42);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text(`NET TOTAL:`, rightColX - 65, footerY + 25);
+    doc.text(formatCurrency(grandNetRevenue), rightColX - 5, footerY + 25, { align: 'right' });
 
     const fileName = eventTitle 
       ? `Ethevier_${eventTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
