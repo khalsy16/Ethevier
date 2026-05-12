@@ -520,16 +520,47 @@ export default function SalesRecap() {
         </div>
       ) : (
         // TABLE VIEW
-        <div className="bg-white/5 border border-white/10 rounded-[2rem] overflow-x-auto shadow-2xl">
-          {(() => {
-            const currentSales = groupedSales[selectedEvent];
-            const grandTotalQty = currentSales.reduce((acc, sale) => acc + sale.items.reduce((iAcc, item) => iAcc + item.quantity, 0), 0);
-            const grandTotalPrice = currentSales.reduce((acc, sale) => acc + sale.items.reduce((iAcc, item) => iAcc + (item.price * item.quantity), 0), 0);
-            const grandTotalFee = currentSales.reduce((acc, sale) => acc + (Number(sale.fee) || 0), 0);
-            const grandTotalFinalPrice = grandTotalPrice + grandTotalFee;
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+             {(() => {
+                const currentSales = groupedSales[selectedEvent!];
+                const totalItems = currentSales.reduce((acc, sale) => acc + sale.items.reduce((iAcc, item) => iAcc + item.quantity, 0), 0);
+                const subtotal = currentSales.reduce((acc, sale) => acc + sale.items.reduce((iAcc, item) => iAcc + (item.price * item.quantity), 0), 0);
+                const totalFees = currentSales.reduce((acc, sale) => acc + (Number(sale.fee) || 0), 0);
+                const netTotal = subtotal + totalFees;
 
-            return (
-              <table className="w-full text-xs text-left border-collapse min-w-[1000px]">
+                return (
+                  <>
+                    <div className="p-6 bg-white/5 border border-white/10 rounded-3xl">
+                      <p className="text-[10px] font-bold text-xavier-blue uppercase tracking-widest mb-1 opacity-60">Total Items</p>
+                      <p className="text-2xl font-black text-star-white">{totalItems}</p>
+                    </div>
+                    <div className="p-6 bg-white/5 border border-white/10 rounded-3xl">
+                      <p className="text-[10px] font-bold text-xavier-blue uppercase tracking-widest mb-1 opacity-60">Subtotal</p>
+                      <p className="text-2xl font-black text-star-white">{formatCurrency(subtotal)}</p>
+                    </div>
+                    <div className="p-6 bg-red-500/5 border border-red-500/10 rounded-3xl">
+                      <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-1 opacity-60">Total Fees</p>
+                      <p className="text-2xl font-black text-red-400">{formatCurrency(totalFees)}</p>
+                    </div>
+                    <div className="p-6 bg-aether-gold/10 border border-aether-gold/20 rounded-3xl">
+                      <p className="text-[10px] font-bold text-aether-gold uppercase tracking-widest mb-1 opacity-60">Net Revenue</p>
+                      <p className="text-2xl font-black text-aether-gold">{formatCurrency(netTotal)}</p>
+                    </div>
+                  </>
+                );
+             })()}
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-[2rem] overflow-x-auto shadow-2xl">
+            {(() => {
+              const currentSales = groupedSales[selectedEvent!];
+              const grandTotalQty = currentSales.reduce((acc, sale) => acc + sale.items.reduce((iAcc, item) => iAcc + item.quantity, 0), 0);
+              const grandTotalPrice = currentSales.reduce((acc, sale) => acc + sale.items.reduce((iAcc, item) => iAcc + (item.price * item.quantity), 0), 0);
+              const grandTotalFee = currentSales.reduce((acc, sale) => acc + (Number(sale.fee) || 0), 0);
+              const grandTotalFinalPrice = grandTotalPrice + grandTotalFee;
+
+              return (
+                <table className="w-full text-xs text-left border-collapse min-w-[1000px]">
                 <thead>
                   <tr className="bg-celestial-depth/80 text-xavier-blue uppercase tracking-tighter font-black">
                     <th className="p-4 border border-white/5 text-center w-12">
@@ -658,7 +689,8 @@ export default function SalesRecap() {
               </table>
             );
           })()}
-        </div>
+          </div>
+        </>
       )}
     {sales.length === 0 && (
           <div className="bg-white/5 border border-white/10 rounded-[2rem] p-20 text-center text-xavier-blue/40 italic">
