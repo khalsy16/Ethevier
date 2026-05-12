@@ -294,8 +294,6 @@ export default function SalesRecap() {
       });
     });
 
-    const totalFinalAmount = totalItemsPrice + totalFees;
-
     // Add Brand Header
     doc.setFillColor(15, 23, 42); // Deep Dark
     doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
@@ -321,6 +319,14 @@ export default function SalesRecap() {
       startY: 45,
       head: [['ID', 'CUSTOMER', 'BOOTH', 'ITEM NAME', 'QTY', 'PRICE', 'T. QTY', 'SUBTOTAL', 'FEE', 'TOTAL', 'INV']],
       body: tableData,
+      foot: [[
+        { content: 'GRAND TOTAL', colSpan: 6, styles: { halign: 'right', fontStyle: 'bold', fillColor: [30, 41, 59], textColor: [255, 255, 255] } },
+        { content: grandTotalQty.toString(), styles: { halign: 'center', fontStyle: 'bold', fillColor: [30, 41, 59], textColor: [255, 255, 255] } },
+        { content: formatCurrency(grandSubtotal).replace('Rp', '').trim(), styles: { halign: 'right', fontStyle: 'bold', fillColor: [30, 41, 59], textColor: [255, 255, 255] } },
+        { content: formatCurrency(grandTotalFees).replace('Rp', '').trim(), styles: { halign: 'right', fontStyle: 'bold', fillColor: [220, 38, 38], textColor: [255, 255, 255] } },
+        { content: formatCurrency(grandNetRevenue).replace('Rp', '').trim(), styles: { halign: 'right', fontStyle: 'bold', fillColor: [255, 215, 0], textColor: [15, 23, 42] } },
+        ''
+      ]],
       theme: 'grid',
       headStyles: { 
         fillColor: [30, 41, 59], 
@@ -356,57 +362,6 @@ export default function SalesRecap() {
         doc.text(`Ethevier Financial Service - Page ${doc.getNumberOfPages()}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
       }
     });
-
-    // Add Final Summary Box at the end
-    let finalY = (doc as any).lastAutoTable.finalY + 15;
-    const boxWidth = 120;
-    const boxHeight = 50;
-    const startX = doc.internal.pageSize.width - boxWidth - 14;
-
-    // Check if box fits on current page
-    if (finalY + boxHeight > doc.internal.pageSize.height - 20) {
-      doc.addPage();
-      finalY = 20;
-    }
-
-    doc.setDrawColor(226, 232, 240);
-    doc.setFillColor(248, 250, 252);
-    doc.roundedRect(startX, finalY, boxWidth, boxHeight, 3, 3, 'FD');
-    
-    doc.setTextColor(15, 23, 42);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text('GRAND RECAP SUMMARY', startX + 5, finalY + 10);
-    
-    doc.setDrawColor(30, 41, 59, 0.1);
-    doc.line(startX + 5, finalY + 13, startX + boxWidth - 5, finalY + 13);
-
-    doc.setTextColor(100);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    
-    const rowY = (offset: number) => finalY + 22 + (offset * 7);
-    
-    doc.text(`Total Records:`, startX + 5, rowY(0));
-    doc.text(`${sortedSales.length} Transactions`, startX + boxWidth - 5, rowY(0), { align: 'right' });
-    
-    doc.text(`Total Items Sold:`, startX + 5, rowY(1));
-    doc.text(`${grandTotalQty} Items`, startX + boxWidth - 5, rowY(1), { align: 'right' });
-    
-    doc.text(`Total Item Sales (Subtotal):`, startX + 5, rowY(2));
-    doc.text(`${formatCurrency(grandSubtotal)}`, startX + boxWidth - 5, rowY(2), { align: 'right' });
-    
-    doc.text(`Total Additional Fees:`, startX + 5, rowY(3));
-    doc.text(`${formatCurrency(grandTotalFees)}`, startX + boxWidth - 5, rowY(3), { align: 'right' });
-    
-    // Revenue Line
-    doc.setFillColor(30, 41, 59);
-    doc.rect(startX, finalY + boxHeight - 12, boxWidth, 12, 'F');
-    doc.setTextColor(255, 215, 0); // Gold text on dark bg
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`GRAND NET REVENUE:`, startX + 5, finalY + boxHeight - 4);
-    doc.text(`${formatCurrency(grandNetRevenue)}`, startX + boxWidth - 5, finalY + boxHeight - 4, { align: 'right' });
 
     const fileName = eventTitle 
       ? `Ethevier_${eventTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
