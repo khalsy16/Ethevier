@@ -26,7 +26,8 @@ import {
   Edit2,
   Sparkle,
   ArrowLeft,
-  Folder
+  Folder,
+  ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -70,6 +71,7 @@ interface SalesEntry {
   fee: number;
   noInvoice: string;
   category?: string;
+  shopLink?: string;
   createdAt: any;
 }
 
@@ -93,6 +95,7 @@ export default function SalesRecap() {
   const [category, setCategory] = useState('');
   const [fee, setFee] = useState(4000);
   const [noInvoice, setNoInvoice] = useState('');
+  const [shopLink, setShopLink] = useState('');
   const [items, setItems] = useState<SalesItem[]>([{ name: '', quantity: 1, price: 0 }]);
 
   const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
@@ -203,6 +206,7 @@ export default function SalesRecap() {
       fee: Number(fee),
       userId: user.uid,
       noInvoice,
+      shopLink,
       updatedAt: serverTimestamp()
     };
 
@@ -226,6 +230,7 @@ export default function SalesRecap() {
     setBooth('');
     setFee(4000);
     setNoInvoice('');
+    setShopLink('');
     setItems([{ name: '', quantity: 1, price: 0 }]);
     setCategory('');
     setShowAdd(false);
@@ -261,9 +266,18 @@ export default function SalesRecap() {
       return dateA - dateB;
     });
 
+    // Calculate Grand Totals
+    let totalQty = 0;
+    let totalItemsPrice = 0;
+    let totalFees = 0;
+
     sortedSales.forEach((sale, saleIdx) => {
-      const totalPrice = sale.items.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
-      const finalPrice = totalPrice + (Number(sale.fee) || 0);
+      const saleTotalPrice = sale.items.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+      const saleFinalPrice = saleTotalPrice + (Number(sale.fee) || 0);
+
+      totalQty += sale.items.reduce((acc, curr) => acc + curr.quantity, 0);
+      totalItemsPrice += saleTotalPrice;
+      totalFees += (Number(sale.fee) || 0);
 
       sale.items.forEach((item, itemIdx) => {
         const row = [
@@ -274,14 +288,16 @@ export default function SalesRecap() {
           item.quantity,
           formatCurrency(item.price).replace('Rp', '').trim(),
           itemIdx === 0 ? sale.items.reduce((acc, curr) => acc + curr.quantity, 0) : '',
-          itemIdx === 0 ? formatCurrency(totalPrice).replace('Rp', '').trim() : '',
+          itemIdx === 0 ? formatCurrency(saleTotalPrice).replace('Rp', '').trim() : '',
           itemIdx === 0 ? formatCurrency(sale.fee).replace('Rp', '').trim() : '',
-          itemIdx === 0 ? formatCurrency(finalPrice).replace('Rp', '').trim() : '',
+          itemIdx === 0 ? formatCurrency(saleFinalPrice).replace('Rp', '').trim() : '',
           itemIdx === 0 ? sale.noInvoice : ''
         ];
         tableData.push(row);
       });
     });
+
+    const totalFinalAmount = totalItemsPrice + totalFees;
 
     // Add Brand Header
     doc.setFillColor(15, 23, 42); // Deep Dark
@@ -295,7 +311,8 @@ export default function SalesRecap() {
     doc.setTextColor(148, 163, 184); // Slate blue
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(eventTitle ? `EVENT: ${eventTitle.toUpperCase()}` : 'MAGICAL FINANCIAL RECAP', 14, 30);
+    const subTitle = eventTitle ? `EVENT: ${eventTitle.toUpperCase()}` : 'MAGICAL FINANCIAL RECAP';
+    doc.text(subTitle, 14, 30);
     
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(12);
@@ -307,6 +324,14 @@ export default function SalesRecap() {
       startY: 45,
       head: [['ID', 'CUSTOMER', 'BOOTH', 'ITEM NAME', 'QTY', 'PRICE', 'T. QTY', 'T. PRICE', 'FEE', 'FINAL', 'INV']],
       body: tableData,
+      foot: [[
+        { content: 'GRAND TOTAL', colSpan: 6, styles: { halign: 'right', fontStyle: 'bold' } },
+        { content: totalQty.toString(), styles: { halign: 'center', fontStyle: 'bold' } },
+        { content: formatCurrency(totalItemsPrice).replace('Rp', '').trim(), styles: { halign: 'right', fontStyle: 'bold' } },
+        { content: formatCurrency(totalFees).replace('Rp', '').trim(), styles: { halign: 'right', fontStyle: 'bold', textColor: [220, 38, 38] } },
+        { content: formatCurrency(totalFinalAmount).replace('Rp', '').trim(), styles: { halign: 'right', fontStyle: 'bold', fillColor: [255, 215, 0], textColor: [15, 23, 42] } },
+        ''
+      ]],
       theme: 'grid',
       headStyles: { 
         fillColor: [30, 41, 59], 
@@ -332,8 +357,8 @@ export default function SalesRecap() {
         5: { halign: 'right', cellWidth: 25 },
         6: { halign: 'center', fontStyle: 'bold', cellWidth: 15 },
         7: { halign: 'right', cellWidth: 25 },
-        8: { halign: 'right', textColor: [220, 38, 38], cellWidth: 20 },
-        9: { halign: 'right', fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 30 },
+        8: { halign: 'right', cellWidth: 20 },
+        9: { halign: 'right', fontStyle: 'bold', cellWidth: 30 },
         10: { halign: 'center', cellWidth: 15 }
       },
       didDrawPage: (data) => {
@@ -342,6 +367,36 @@ export default function SalesRecap() {
         doc.text(`Ethevier Financial Service - Page ${doc.getNumberOfPages()}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
       }
     });
+
+    // Add Summary Box at the end if it's the last page or just after the table
+    const finalY = (doc as any).lastAutoTable.finalY + 15;
+    if (finalY < doc.internal.pageSize.height - 60) {
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(doc.internal.pageSize.width - 115, finalY, 100, 45, 3, 3, 'FD');
+      
+      doc.setTextColor(100);
+      doc.setFontSize(9);
+      doc.text('FINANCIAL SUMMARY', doc.internal.pageSize.width - 110, finalY + 10);
+      
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(10);
+      doc.text(`Total Items Sold: `, doc.internal.pageSize.width - 110, finalY + 20);
+      doc.text(`${totalQty}`, doc.internal.pageSize.width - 25, finalY + 20, { align: 'right' });
+      
+      doc.text(`Subtotal: `, doc.internal.pageSize.width - 110, finalY + 26);
+      doc.text(`${formatCurrency(totalItemsPrice)}`, doc.internal.pageSize.width - 25, finalY + 26, { align: 'right' });
+      
+      doc.text(`Total Fees: `, doc.internal.pageSize.width - 110, finalY + 32);
+      doc.text(`${formatCurrency(totalFees)}`, doc.internal.pageSize.width - 25, finalY + 32, { align: 'right' });
+      
+      doc.setFillColor(255, 215, 0);
+      doc.rect(doc.internal.pageSize.width - 115, finalY + 36, 100, 9, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text(`NET REVENUE: `, doc.internal.pageSize.width - 110, finalY + 42);
+      doc.text(`${formatCurrency(totalFinalAmount)}`, doc.internal.pageSize.width - 25, finalY + 42, { align: 'right' });
+    }
 
     const fileName = eventTitle 
       ? `Ethevier_${eventTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
@@ -408,13 +463,17 @@ export default function SalesRecap() {
             <Download className="w-5 h-5" />
             <span>Export PDF</span>
           </button>
-          <button 
-            onClick={() => setShowAdd(true)}
-            className="px-6 py-3 bg-aether-gold text-celestial-dark font-bold rounded-2xl flex items-center justify-center gap-2 hover:scale-105 transition-all shadow-lg"
-          >
-            <Plus className="w-5 h-5" />
-            <span>New Entry</span>
-          </button>
+            <button 
+              onClick={() => {
+                resetForm();
+                if (selectedEvent) setCategory(selectedEvent);
+                setShowAdd(true);
+              }}
+              className="px-6 py-3 bg-aether-gold text-celestial-dark font-bold rounded-2xl flex items-center justify-center gap-2 hover:scale-105 transition-all shadow-lg"
+            >
+              <Plus className="w-5 h-5" />
+              <span>New Entry</span>
+            </button>
         </div>
       </div>
 
@@ -514,7 +573,22 @@ export default function SalesRecap() {
                                   <span className="text-[10px] text-star-white font-bold">{saleIdx + 1}</span>
                                </div>
                             </td>
-                            <td className="p-3 border border-white/5 text-star-white font-medium italic" rowSpan={sale.items.length}>{sale.customerName}</td>
+                            <td className="p-3 border border-white/5 text-star-white font-medium italic" rowSpan={sale.items.length}>
+                              <div className="flex items-center gap-2">
+                                <span>{sale.customerName}</span>
+                                {sale.shopLink && (
+                                  <a 
+                                    href={sale.shopLink} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    onClick={e => e.stopPropagation()}
+                                    className="p-1 bg-white/5 rounded hover:bg-aether-gold/20 transition-colors"
+                                  >
+                                    <ExternalLink className="w-3 h-3 text-aether-gold" />
+                                  </a>
+                                )}
+                              </div>
+                            </td>
                             <td className="p-3 border border-white/5 text-center text-xavier-blue" rowSpan={sale.items.length}>{sale.booth}</td>
                           </>
                         )}
@@ -541,6 +615,7 @@ export default function SalesRecap() {
                                     setCategory(sale.category || '');
                                     setFee(sale.fee);
                                     setNoInvoice(sale.noInvoice);
+                                    setShopLink(sale.shopLink || '');
                                     setItems(sale.items);
                                     setShowAdd(true);
                                   }}
@@ -709,6 +784,16 @@ export default function SalesRecap() {
                           className="w-full px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-star-white focus:outline-none focus:border-aether-gold/50"
                         />
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                      <label className="text-xs font-bold text-xavier-blue uppercase tracking-widest px-2">Shop Link (Optional)</label>
+                      <input 
+                        value={shopLink}
+                        onChange={e => setShopLink(e.target.value)}
+                        placeholder="https://..."
+                        className="w-full px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-star-white focus:outline-none focus:border-aether-gold/50"
+                      />
                   </div>
 
                   <button 

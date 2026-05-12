@@ -293,7 +293,11 @@ export default function Wishlist() {
             </button>
           )}
           <button 
-            onClick={() => setShowAdd(true)}
+            onClick={() => {
+              resetForm();
+              if (selectedCategory) setCategory(selectedCategory);
+              setShowAdd(true);
+            }}
             className="flex-1 sm:flex-none group relative px-8 py-4 bg-aether-gold text-celestial-dark font-black rounded-2xl overflow-hidden transition-all hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,215,0,0.3)]"
           >
           <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
@@ -343,35 +347,6 @@ export default function Wishlist() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           <AnimatePresence>
             {groupedItems[selectedCategory].map((item, idx) => {
-               const now = new Date().getTime();
-               const start = getMillis(item.createdAt) || now;
-               const end = getMillis(item.deadline);
-               
-               let progress = 0;
-               let isDeadlineBased = false;
-               let timeRemaining = '';
-               
-               if (end) {
-                 isDeadlineBased = true;
-                 const total = end - start;
-                 const elapsed = now - start;
-                 
-                 if (total > 0) {
-                   progress = Math.min(Math.max((elapsed / total) * 100, 0), 100);
-                 } else {
-                   progress = 100;
-                 }
-      
-                 const remaining = end - now;
-                 if (remaining > 0) {
-                   const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
-                   const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                   timeRemaining = days > 0 ? `${days}d left` : `${hours}h left`;
-                 } else {
-                   timeRemaining = 'Goal reached or overdue';
-                 }
-               }
-      
                return (
                   <motion.div 
                     key={item.id}
@@ -444,27 +419,6 @@ export default function Wishlist() {
                     </div>
   
                     <div className="space-y-4">
-                      <div className="space-y-2">
-                          <div className="flex justify-between items-end text-xs text-xavier-blue font-semibold">
-                            <div className="flex flex-col">
-                               <span>{isDeadlineBased ? 'Time to Star Goal' : 'No Deadline Set'}</span>
-                               {isDeadlineBased && <span className="text-[10px] text-aether-gold/80">{timeRemaining}</span>}
-                            </div>
-                            {isDeadlineBased && <span>{Math.round(progress)}%</span>}
-                          </div>
-                         {isDeadlineBased ? (
-                           <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                              <motion.div 
-                                initial={{ width: 0 }}
-                                animate={{ width: `${progress}%` }}
-                                className={`h-full ${item.status === 'attained' ? 'bg-green-500' : 'bg-aether-gold'}`}
-                              />
-                           </div>
-                         ) : (
-                           <div className="h-2 bg-white/5 rounded-full border border-dashed border-white/10" />
-                         )}
-                      </div>
-  
                       <div className="flex items-center justify-between pt-4 border-t border-white/5">
                           <div className="flex items-center gap-2 text-[10px] text-xavier-blue font-bold uppercase tracking-widest">
                              <Clock className="w-3 h-3" />
