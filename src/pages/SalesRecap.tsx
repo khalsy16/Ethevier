@@ -363,7 +363,7 @@ export default function SalesRecap() {
     // Add Final Summary Box at the end
     let finalY = (doc as any).lastAutoTable.finalY + 15;
     const boxWidth = 120;
-    const boxHeight = 50;
+    const boxHeight = 65;
     const startX = doc.internal.pageSize.width - boxWidth - 14;
 
     // Check if box fits on current page
@@ -396,11 +396,11 @@ export default function SalesRecap() {
     doc.text(`Total Items Sold:`, startX + 5, rowY(1));
     doc.text(`${grandTotalQty} Items`, startX + boxWidth - 5, rowY(1), { align: 'right' });
     
-    doc.text(`Total Additional Fees:`, startX + 5, rowY(2));
-    doc.text(`${formatCurrency(grandTotalFees)}`, startX + boxWidth - 5, rowY(2), { align: 'right' });
+    doc.text(`Total Item Sales (Subtotal):`, startX + 5, rowY(2));
+    doc.text(`${formatCurrency(grandSubtotal)}`, startX + boxWidth - 5, rowY(2), { align: 'right' });
     
-    doc.text(`Total Item Sales (Subtotal):`, startX + 5, rowY(3));
-    doc.text(`${formatCurrency(grandSubtotal)}`, startX + boxWidth - 5, rowY(3), { align: 'right' });
+    doc.text(`Total Additional Fees:`, startX + 5, rowY(3));
+    doc.text(`${formatCurrency(grandTotalFees)}`, startX + boxWidth - 5, rowY(3), { align: 'right' });
     
     // Revenue Line
     doc.setFillColor(30, 41, 59);
