@@ -396,11 +396,11 @@ export default function SalesRecap() {
     doc.text(`Total Items Sold:`, startX + 5, rowY(1));
     doc.text(`${grandTotalQty} Items`, startX + boxWidth - 5, rowY(1), { align: 'right' });
     
-    doc.text(`Total Item Sales (Subtotal):`, startX + 5, rowY(2));
-    doc.text(`${formatCurrency(grandSubtotal)}`, startX + boxWidth - 5, rowY(2), { align: 'right' });
+    doc.text(`Total Additional Fees:`, startX + 5, rowY(2));
+    doc.text(`${formatCurrency(grandTotalFees)}`, startX + boxWidth - 5, rowY(2), { align: 'right' });
     
-    doc.text(`Total Additional Fees:`, startX + 5, rowY(3));
-    doc.text(`${formatCurrency(grandTotalFees)}`, startX + boxWidth - 5, rowY(3), { align: 'right' });
+    doc.text(`Total Item Sales (Subtotal):`, startX + 5, rowY(3));
+    doc.text(`${formatCurrency(grandSubtotal)}`, startX + boxWidth - 5, rowY(3), { align: 'right' });
     
     // Revenue Line
     doc.setFillColor(30, 41, 59);
